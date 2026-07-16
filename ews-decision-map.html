@@ -15,7 +15,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 /* ============================================================
-   EWS · How Decisions Move — Interactive draft v0.2.4
+   EWS · How Decisions Move — Interactive draft v0.2.5
    Companion to: Interim Governance Structure v0.2 (July 2026)
    Decision data: EWS Governance Resolution Framework (working draft)
    ------------------------------------------------------------
@@ -54,6 +54,17 @@
             under the cursor: .tab:hover tied .tab[aria-selected="true"] at
             0-2-0 and won on source order alone, so hover is now scoped
             with :not([aria-selected="true"]).
+   v0.2.5 — the mobile pathway screen was a second copy of the disclosure,
+            so tapping through to it read as a reload. Navigation was never
+            broken (view and URL both changed correctly); the destination
+            just said nothing new. It now carries what the disclosure can't:
+            each step wears its realm tint, edge colour and REALMS name, so
+            a journey crossing into another realm changes colour at the
+            crossing. alt roles dropped here (they are a first call, not a
+            step). Control renamed "Trace this on the map" → "Trace this
+            pathway", honest on both form factors. Back from a trace now
+            restores the disclosure it was launched from instead of
+            collapsing it.
    ============================================================ */
 :root{
   --purple:#542D5C;          /* EWS brand */
@@ -332,7 +343,40 @@ h1{
   color:var(--gold-deep);white-space:nowrap;
 }
 
-/* ---------- the stepper (mobile pathway screen + desktop trace panel) ---------- */
+/* ---------- the pathway screen (mobile trace) ----------
+   Each step wears its realm: the tint IS the information. A journey that
+   stays in one realm looks uniform; one that crosses realms changes colour
+   at the step where it crosses. Nothing else announces the change. */
+.rsteps{display:flex;flex-direction:column;gap:10px}
+.rstep{
+  background:var(--card);border:1.5px solid var(--line);border-radius:12px;
+  padding:12px 14px 13px;
+}
+.rstep[data-realm="ped"]{background:var(--ped-bg);border-color:var(--ped-edge)}
+.rstep[data-realm="adm"]{background:var(--adm-bg);border-color:var(--adm-edge)}
+.rstep[data-realm="brd"]{background:var(--brd-bg);border-color:var(--brd-edge)}
+.rstep-realm{
+  font-size:10px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--ink-soft);margin-bottom:8px;
+}
+.rstep-row{display:flex;gap:11px;align-items:flex-start}
+.rstep .n{
+  flex:none;width:24px;height:24px;border-radius:999px;margin-top:1px;
+  background:var(--purple);color:#fff;
+  font-size:12px;font-weight:700;display:grid;place-items:center;
+}
+.rstep-label{font-size:14.5px;font-weight:700;color:var(--ink);line-height:1.25}
+.rstep-text{font-size:13.5px;color:var(--ink);opacity:.82;margin-top:3px}
+/* the start person stays strongest — heavier frame, bigger voice */
+.rstep.lead{border-width:2.5px;box-shadow:0 2px 14px rgba(84,45,92,.09);padding:16px 15px 17px}
+.rstep.lead .n{width:28px;height:28px;font-size:13px;margin-top:2px}
+.rstep.lead .rstep-label{
+  font-family:'Fraunces',Georgia,serif;font-weight:600;color:var(--purple);
+  font-size:clamp(19px,4.6vw,23px);line-height:1.16;
+}
+.rstep.lead .rstep-text{font-size:14.5px;opacity:1;margin-top:6px}
+
+/* ---------- the stepper (desktop trace panel) ---------- */
 .stepper .pstep{
   display:flex;gap:12px;align-items:flex-start;
   background:var(--card);border:1px solid var(--line);border-radius:12px;
@@ -625,7 +669,7 @@ footer .ptcnote{color:var(--purple);font-weight:600}
   <h1>How Decisions Move</h1>
   <p class="subtitle">An interactive companion to the Interim Governance Structure.</p>
   <div class="draftbar">
-    <span class="badge">Working draft v0.2.4</span>
+    <span class="badge">Working draft v0.2.5</span>
     <span class="badge quiet">Built on Structure v0.2 + Decision Matrix draft</span>
     <span class="badge quiet">For committee review — not yet approved</span>
   </div>
@@ -1340,6 +1384,7 @@ let branchPick = null;      // index into SITUATIONS[n].branches
 let traceSituation = null;  // situation id being traced on the map
 let pathwayId = null;       // situation id on the pathway screen
 let situationId = null;     // situation id on the signpost screen
+let journeyOpen = false;    // is the signpost's disclosure expanded?
 
 const urlNote = document.getElementById("urlNote");
 
@@ -1575,10 +1620,13 @@ tabs.forEach(t=>t.addEventListener("click",e=>{
 /* ============================================================
    VIEW 2 — signposts
    ============================================================ */
-function openSituation(id){
+/* keepJourney: arriving fresh collapses the disclosure (the signpost is the
+   answer); coming back from a traced pathway restores it. */
+function openSituation(id, keepJourney){
   const s = SITUATIONS.find(x=>x.id===id);
   if(!s) return;
   branchPick = null;
+  journeyOpen = !!keepJourney;
   situationId = id;
   renderSignpost(s);
   showView("signpost");
@@ -1628,10 +1676,12 @@ function journeyHTML(s){
   if(s.review) inner += `<p class="reviewline">${esc(REVIEW_LINE)}</p>`;
   if(s.kind === "process") inner +=
     `<button class="tracebtn" id="traceBtn" type="button">
-      Trace this on the map <span class="tchev" aria-hidden="true">→</span>
+      Trace this pathway <span class="tchev" aria-hidden="true">→</span>
     </button>`;
-  return `<div class="journey" id="journey">
-    <button type="button" id="journeyToggle" aria-expanded="false" aria-controls="journeyBody">
+  /* journeyOpen survives the trip out to the pathway screen and back, so
+     returning lands on the disclosure the reader left, not a reset one. */
+  return `<div class="journey${journeyOpen ? " open" : ""}" id="journey">
+    <button type="button" id="journeyToggle" aria-expanded="${journeyOpen}" aria-controls="journeyBody">
       <span>If it isn’t resolved →</span><span class="jchev" aria-hidden="true">▾</span>
     </button>
     <div class="journey-body" id="journeyBody">${inner}</div>
@@ -1686,8 +1736,8 @@ function renderSignpost(s){
   if(jt) jt.addEventListener("click",e=>{
     e.stopPropagation();
     const j = document.getElementById("journey");
-    const open = j.classList.toggle("open");
-    jt.setAttribute("aria-expanded", String(open));
+    journeyOpen = j.classList.toggle("open");
+    jt.setAttribute("aria-expanded", String(journeyOpen));
   });
   const tb = document.getElementById("traceBtn");
   if(tb) tb.addEventListener("click",e=>{e.stopPropagation();trace(s.id);});
@@ -1751,7 +1801,47 @@ function trace(sid){
 
 /* ============================================================
    VIEW 3 — the pathway screen (mobile)
+   ------------------------------------------------------------
+   Deliberately NOT the disclosure again. The disclosure says who and
+   in what order; this says WHERE each step lives. Realm tint is the
+   whole point — a step crossing into another realm changes colour, and
+   that change is the only thing announcing it. No arrows, no flow copy.
    ============================================================ */
+
+/* A step's realm is its roles' realm. Multi-role steps ("whichever fits
+   your child") share one, and render as one card. */
+function realmOfStep(roles){
+  const realms = [...new Set((roles || []).map(id => ROLES[id] && ROLES[id].realm).filter(Boolean))];
+  if(realms.length > 1) console.warn(`Step spans realms ${realms.join("/")}: ${roles.join(", ")}`);
+  return realms[0] || null;
+}
+
+function pathwayStepsHTML(s){
+  /* alt is an alternative first call, not a step — it belongs on the
+     signpost and is deliberately absent here. */
+  const rows = [
+    {roles:s.start.roles, label:s.start.label, text:s.start.why, lead:true},
+    ...(s.steps || []).map(st => ({roles:st.roles, label:st.label, text:st.text, lead:false}))
+  ];
+  let html = `<div class="rsteps">`;
+  rows.forEach((r,i)=>{
+    const realm = realmOfStep(r.roles);
+    html += `<div class="rstep${r.lead ? " lead" : ""}"${realm ? ` data-realm="${realm}"` : ""}>
+      ${realm ? `<div class="rstep-realm">${esc(REALMS[realm].name)}</div>` : ""}
+      <div class="rstep-row">
+        <span class="n" aria-hidden="true">${i+1}</span>
+        <div>
+          <div class="rstep-label">${esc(r.label)}</div>
+          <p class="rstep-text">${esc(r.text)}</p>
+        </div>
+      </div>
+    </div>`;
+  });
+  html += `</div>`;
+  if(s.review) html += `<p class="reviewline">${esc(REVIEW_LINE)}</p>`;
+  return html;
+}
+
 function showPathway(sid){
   const s = SITUATIONS.find(x=>x.id===sid);
   if(!s) return;
@@ -1760,11 +1850,11 @@ function showPathway(sid){
     `<button class="backlink" id="pathBack"><span aria-hidden="true">←</span> Back to this situation</button>
      <h2 class="sig-q">${esc(s.card)}</h2>
      ${flagsHTML(s)}
-     ${stepperHTML(s)}
+     ${pathwayStepsHTML(s)}
      <p class="sigsrc">From: ${esc(s.src)}</p>`;
   showView("pathway");
   document.getElementById("pathBack").addEventListener("click",e=>{
-    e.stopPropagation(); openSituation(sid);
+    e.stopPropagation(); openSituation(sid, true);   // back to the disclosure they left
   });
 }
 
@@ -1989,7 +2079,7 @@ function buildTracePanel(s){
      ${stepperHTML(s)}
      <p class="src">From: ${esc(s.src)}</p>`;
   document.getElementById("traceBack").addEventListener("click",e=>{
-    e.stopPropagation(); openSituation(s.id);
+    e.stopPropagation(); openSituation(s.id, true);  // same disclosure they traced from
   });
 }
 
