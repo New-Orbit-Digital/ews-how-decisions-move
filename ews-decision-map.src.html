@@ -1,0 +1,1542 @@
+<!DOCTYPE html>
+<!-- @banner -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>How Decisions Move · EWS Interim Governance 2026–27</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   EWS · How Decisions Move — Interactive draft v0.2.4
+   Companion to: Interim Governance Structure v0.2 (July 2026)
+   Decision data: EWS Governance Resolution Framework (working draft)
+   ------------------------------------------------------------
+   Changelog
+   v0.1   — map + role panel + decision pathway wires.
+   v0.2.0 — all data lifted into ews-pathways-data.js and inlined by
+            build.js; HTML is now rendering only. Situation door is
+            the default view (10 cards → signpost); the v0.1 map moves
+            behind an "Explore the structure" tab, unchanged.
+            ?draft=1 reveals committee-review flags.
+   v0.2.1 — "Trace this on the map" added to process signposts.
+            Desktop: explore mode lights only that situation's roles,
+            badges them ①②③ in place, wires the sequence, dims the rest.
+            Mobile (≤1020px): explore mode becomes accordion realms with
+            no wires at all; trace opens a dedicated pathway screen.
+            Tap targets ≥44px on touch; all hover styling gated behind
+            (hover:hover) so nothing is hover-only.
+   v0.2.2 — search pinned to the top of the situation door. Vanilla,
+            offline, no network: situations (card + keywords) and roles
+            (label + group + realm + ROLE_KEYWORDS) scored exact >
+            prefix > substring across every keyword, situations above
+            roles on ties, data order last. Rows route to the signpost
+            or the role's explore panel.
+   v0.2.3 — deep links. ?s= / ?role= / ?view=explore / ?draft=1, all
+            combinable; ?s=<id>&view=explore means "trace this", which
+            the map renders on desktop and the pathway screen renders
+            on a phone. Navigation rewrites the URL via replaceState,
+            wrapped in try/catch because file:// has an opaque origin
+            and some engines refuse the rewrite — links INTO the file
+            still work there. Unknown ids land on the door with a quiet
+            note.
+   v0.2.4 — two state-collision contrast fixes. Selected realm chairs
+            rendered white-on-white: the realm-scoped chair rules (0-3-0)
+            outranked .role.selected (0-2-0), so a 0-4-0 selected-chair
+            rule now matches them. Selected mode chips went purple-on-purple
+            under the cursor: .tab:hover tied .tab[aria-selected="true"] at
+            0-2-0 and won on source order alone, so hover is now scoped
+            with :not([aria-selected="true"]).
+   ============================================================ */
+:root{
+  --purple:#542D5C;          /* EWS brand */
+  --purple-soft:#EFE7F2;
+  --gold:#FCD23E;            /* EWS brand */
+  --gold-deep:#C9A227;
+  --ink:#2B2430;
+  --ink-soft:#6B6172;
+  --paper:#FBF9F5;
+  --card:#FFFFFF;
+  --line:#E4DDD3;
+
+  --ped-bg:#F5E7E4;  --ped-band:#DBB9B3;  --ped-edge:#C79E97;
+  --adm-bg:#E9EEE5;  --adm-band:#BCC9B1;  --adm-edge:#9FB292;
+  --brd-bg:#F4ECD8;  --brd-band:#DCC791;  --brd-edge:#C6AC6C;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:'Public Sans',system-ui,-apple-system,sans-serif;
+  background:var(--paper); color:var(--ink);
+  font-size:15px; line-height:1.5;
+}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+[hidden]{display:none !important}
+
+/* ---------- masthead ---------- */
+header{
+  max-width:1280px;margin:0 auto;padding:34px 22px 10px;
+}
+.kicker{
+  font-size:11px;letter-spacing:.18em;font-weight:700;color:var(--purple);
+  text-transform:uppercase;display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+}
+.kicker::before{content:"";width:26px;height:3px;background:var(--gold);display:inline-block}
+h1{
+  font-family:'Fraunces',Georgia,serif;font-weight:600;
+  font-size:clamp(28px,4.4vw,44px);line-height:1.08;margin:10px 0 6px;color:var(--purple);
+}
+.subtitle{color:var(--ink-soft);max-width:62ch}
+.draftbar{
+  margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;
+}
+.badge{
+  font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  padding:4px 10px;border-radius:999px;border:1.5px solid var(--gold-deep);
+  background:var(--gold);color:#4A3B00;
+}
+.badge.quiet{background:transparent;border-color:var(--line);color:var(--ink-soft);font-weight:600}
+.howto{
+  margin-top:16px;font-size:14px;color:var(--ink);
+  background:var(--card);border:1px solid var(--line);border-left:4px solid var(--gold);
+  padding:10px 14px;border-radius:8px;max-width:640px;
+}
+.howto b{color:var(--purple)}
+
+/* ---------- view tabs ---------- */
+.viewtabs{
+  max-width:1280px;margin:18px auto 0;padding:0 22px;
+  display:flex;gap:8px;flex-wrap:wrap;
+}
+.tab{
+  min-height:44px;padding:9px 16px;border-radius:999px;
+  border:1.5px solid var(--line);background:var(--card);
+  font-size:13px;font-weight:700;color:var(--ink-soft);
+  transition:background .18s ease,color .18s ease,border-color .18s ease;
+}
+.tab:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.tab[aria-selected="true"]{background:var(--purple);border-color:var(--purple);color:#fff}
+
+/* ---------- situation door ---------- */
+.door{max-width:1000px;margin:16px auto 0;padding:0 22px 30px}
+
+/* a link that pointed at nothing — say so quietly, then get out of the way */
+.urlnote{
+  font-size:13px;color:var(--ink-soft);
+  background:var(--card);border:1px dashed var(--line);border-radius:10px;
+  padding:10px 12px;margin-bottom:10px;
+}
+
+/* search — pinned, so it stays reachable while the cards scroll */
+.searchwrap{
+  position:sticky;top:0;z-index:20;
+  background:var(--paper);padding:8px 0 12px;
+}
+.searchbox{
+  display:flex;align-items:center;gap:10px;min-height:48px;
+  background:var(--card);border:1.5px solid var(--line);border-radius:999px;
+  padding:0 5px 0 14px;
+  transition:border-color .18s ease, box-shadow .18s ease;
+}
+.searchbox:focus-within{border-color:var(--purple);box-shadow:0 0 0 3px rgba(84,45,92,.13)}
+.searchbox .sicon{flex:none;color:var(--ink-soft)}
+#q{
+  flex:1;min-width:0;min-height:46px;
+  border:none;background:none;outline:none;
+  font:inherit;font-size:16px;color:var(--ink);   /* 16px: keeps iOS from zooming on focus */
+}
+#q::placeholder{color:var(--ink-soft)}
+#q::-webkit-search-cancel-button{display:none}    /* we ship our own, at 44px */
+#qClear{
+  flex:none;width:44px;height:44px;border-radius:999px;
+  display:grid;place-items:center;font-size:19px;color:var(--ink-soft);
+}
+#qClear:focus-visible{outline:3px solid var(--gold);outline-offset:-2px}
+
+/* results */
+.results{display:flex;flex-direction:column;gap:8px}
+.sresult{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  width:100%;min-height:56px;text-align:left;
+  background:var(--card);border:1px solid var(--line);border-left:4px solid var(--line);
+  border-radius:10px;padding:11px 14px;
+  transition:border-color .18s ease, box-shadow .18s ease;
+}
+.sresult:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.sresult .chev{flex:none;color:var(--gold-deep);font-size:16px;line-height:1}
+.sresult .rtitle{display:block;font-size:14.5px;font-weight:700;color:var(--ink);line-height:1.25}
+.sresult .rsub{display:block;font-size:12px;color:var(--ink-soft);margin-top:2px}
+/* a situation reads like the card it routes to */
+.sresult.sit{border-left-color:var(--gold)}
+.sresult.sit .rtitle{
+  font-family:'Fraunces',Georgia,serif;font-weight:500;font-size:16px;color:var(--purple);
+}
+/* a role carries its realm's edge colour */
+.sresult[data-realm="ped"]{border-left-color:var(--ped-edge)}
+.sresult[data-realm="adm"]{border-left-color:var(--adm-edge)}
+.sresult[data-realm="brd"]{border-left-color:var(--brd-edge)}
+
+.emptystate{
+  font-size:14px;color:var(--ink-soft);
+  background:var(--card);border:1px dashed var(--line);border-radius:10px;padding:14px 15px;
+}
+.emptystate a{
+  display:inline-block;min-height:44px;padding:11px 0;
+  color:var(--purple);font-weight:700;
+}
+
+.cards{display:grid;grid-template-columns:1fr;gap:10px}
+@media (min-width:720px){ .cards{grid-template-columns:1fr 1fr;gap:12px} }
+.scard{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  width:100%;min-height:64px;text-align:left;
+  background:var(--card);border:1px solid var(--line);border-left:4px solid var(--gold);
+  border-radius:12px;padding:14px 15px;
+  font-family:'Fraunces',Georgia,serif;font-weight:500;font-size:17px;line-height:1.28;
+  color:var(--purple);
+  transition:border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+.scard:active{transform:scale(.995)}
+.scard:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.scard .chev{flex:none;color:var(--gold-deep);font-size:17px;line-height:1}
+
+/* ---------- signpost ---------- */
+.signpost,.pathway{max-width:760px;margin:16px auto 0;padding:0 22px 30px}
+.backlink{
+  display:inline-flex;align-items:center;gap:7px;min-height:44px;
+  font-size:13px;font-weight:700;color:var(--purple);text-align:left;
+}
+.backlink:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.sig-q{
+  font-family:'Fraunces',Georgia,serif;font-weight:600;color:var(--purple);
+  font-size:clamp(22px,5.2vw,30px);line-height:1.14;margin:4px 0 16px;
+}
+
+/* the answer */
+.person{
+  display:flex;gap:12px;align-items:flex-start;
+  background:var(--card);border:1.5px solid var(--purple);border-top:5px solid var(--gold);
+  border-radius:14px;padding:17px 17px 18px;
+  box-shadow:0 2px 16px rgba(84,45,92,.10);
+}
+.person .pnum{
+  flex:none;width:26px;height:26px;border-radius:999px;margin-top:2px;
+  background:var(--purple);color:#fff;font-size:12px;font-weight:700;
+  display:grid;place-items:center;
+}
+.person .who-label{
+  font-family:'Fraunces',Georgia,serif;font-weight:600;color:var(--purple);
+  font-size:clamp(20px,4.8vw,26px);line-height:1.16;
+}
+.person .why{margin-top:7px;font-size:15px;color:var(--ink)}
+
+/* the quieter alternate */
+.person.alt{
+  margin-top:10px;background:transparent;border:1px solid var(--line);border-top:1px solid var(--line);
+  box-shadow:none;padding:12px 14px 13px;display:block;
+}
+.alt-eyebrow{
+  font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ink-soft);margin-bottom:4px;
+}
+.person.alt .who-label{font-family:'Public Sans',system-ui,sans-serif;font-size:15.5px;font-weight:700;color:var(--ink)}
+.person.alt .why{margin-top:3px;font-size:13.5px;color:var(--ink-soft)}
+
+/* branch options */
+.branchprompt{
+  font-family:'Fraunces',Georgia,serif;font-weight:600;color:var(--ink);
+  font-size:19px;margin-bottom:10px;
+}
+.branchopt{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  width:100%;min-height:52px;text-align:left;margin-bottom:8px;
+  background:var(--card);border:1.5px solid var(--line);border-radius:10px;
+  padding:11px 14px;font-size:14.5px;font-weight:600;line-height:1.3;
+  transition:border-color .18s ease,background .18s ease,color .18s ease;
+}
+.branchopt:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.branchopt[aria-pressed="true"]{border-color:var(--purple);background:var(--purple-soft);color:var(--purple)}
+.branchopt .dot{
+  flex:none;width:14px;height:14px;border-radius:999px;border:1.5px solid var(--line);
+}
+.branchopt[aria-pressed="true"] .dot{border-color:var(--purple);background:var(--purple);box-shadow:inset 0 0 0 2.5px #fff}
+.branchpick{margin-top:14px}
+
+/* mini list of contacts */
+.minilist{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:2px 15px 6px}
+.listrow{
+  display:flex;justify-content:space-between;align-items:baseline;gap:14px;
+  padding:12px 0;border-top:1px solid var(--line);
+}
+.listrow:first-child{border-top:none}
+.listrow .l{font-weight:700;font-size:15px;color:var(--purple)}
+.listrow .c{font-size:13.5px;color:var(--ink-soft);text-align:right}
+
+/* the journey — collapsed by default */
+.journey{
+  margin-top:18px;background:var(--card);
+  border:1px solid var(--line);border-radius:12px;overflow:hidden;
+}
+.journey>button{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  width:100%;min-height:48px;padding:12px 15px;text-align:left;
+  font-size:13.5px;font-weight:700;color:var(--purple);
+}
+.journey>button:focus-visible{outline:3px solid var(--gold);outline-offset:-3px}
+.journey .jchev{color:var(--gold-deep);transition:transform .2s ease}
+.journey.open .jchev{transform:rotate(180deg)}
+.journey-body{display:none;padding:0 15px 14px}
+.journey.open .journey-body{display:block}
+.step{display:flex;gap:11px;align-items:flex-start;padding:11px 0;border-top:1px solid var(--line)}
+.step .n{
+  flex:none;width:22px;height:22px;border-radius:999px;margin-top:1px;
+  background:var(--purple-soft);color:var(--purple);border:1.5px solid var(--purple);
+  font-size:11px;font-weight:700;display:grid;place-items:center;
+}
+.step .slabel{font-size:14px;font-weight:700;color:var(--ink)}
+.step .stext{font-size:13px;color:var(--ink-soft);margin-top:2px}
+.reviewline{
+  margin-top:12px;font-size:13px;color:var(--ink);
+  background:var(--paper);border-left:3px solid var(--gold);border-radius:6px;padding:9px 11px;
+}
+
+/* trace call-to-action, inside the expanded disclosure */
+.tracebtn{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  width:100%;min-height:48px;margin-top:14px;
+  background:var(--card);border:1.5px solid var(--purple);border-radius:9px;
+  font-size:13.5px;font-weight:700;color:var(--purple);
+  transition:background .18s ease;
+}
+.tracebtn:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.tracebtn .tchev{color:var(--gold-deep)}
+
+.sigsrc{font-size:11px;color:var(--ink-soft);margin-top:16px}
+
+/* committee-review flags — only with ?draft=1 */
+.flagchip{
+  display:flex;gap:9px;align-items:baseline;flex-wrap:wrap;
+  font-size:12px;line-height:1.4;color:#5A4A00;
+  background:#FFF8DE;border:1px dashed var(--gold-deep);border-radius:9px;
+  padding:7px 11px;margin-bottom:8px;
+}
+.flagchip .tag{
+  font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--gold-deep);white-space:nowrap;
+}
+
+/* ---------- the stepper (mobile pathway screen + desktop trace panel) ---------- */
+.stepper .pstep{
+  display:flex;gap:12px;align-items:flex-start;
+  background:var(--card);border:1px solid var(--line);border-radius:12px;
+  padding:14px 15px;margin-bottom:10px;
+}
+.stepper .pstep .n{
+  flex:none;width:26px;height:26px;border-radius:999px;margin-top:1px;
+  background:var(--purple-soft);color:var(--purple);border:1.5px solid var(--purple);
+  font-size:12px;font-weight:700;display:grid;place-items:center;
+}
+.stepper .pstep .plabel{font-size:15px;font-weight:700;color:var(--ink);line-height:1.2}
+.stepper .pstep .ptext{font-size:13.5px;color:var(--ink-soft);margin-top:4px}
+/* start person is biggest */
+.stepper .pstep.lead{
+  border:1.5px solid var(--purple);border-top:5px solid var(--gold);
+  box-shadow:0 2px 16px rgba(84,45,92,.10);padding:17px;
+}
+.stepper .pstep.lead .n{background:var(--purple);color:#fff;width:28px;height:28px;font-size:13px}
+.stepper .pstep.lead .plabel{
+  font-family:'Fraunces',Georgia,serif;font-weight:600;color:var(--purple);
+  font-size:clamp(20px,4.8vw,26px);line-height:1.16;
+}
+.stepper .pstep.lead .ptext{font-size:15px;color:var(--ink);margin-top:7px}
+/* the alternate first call, quieter */
+.stepper .pstep.altstep{border-style:dashed;background:transparent;box-shadow:none;padding:12px 14px}
+.stepper .pstep.altstep .n{background:transparent;color:var(--ink-soft);border-color:var(--line)}
+.stepper .pstep.altstep .plabel{font-size:14.5px;color:var(--ink)}
+.stepper .pstep.altstep .ptext{font-size:13px}
+
+/* ---------- stage: board + panel ---------- */
+.explore-intro{max-width:1280px;margin:0 auto;padding:16px 22px 0}
+.stage{
+  max-width:1280px;margin:18px auto 0;padding:0 22px 30px;
+  display:grid;grid-template-columns:minmax(0,1fr) 350px;gap:18px;align-items:start;
+}
+.boardwrap{position:relative}
+.board{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;
+  position:relative;z-index:1;
+}
+#wires{
+  position:absolute;inset:0;z-index:2;pointer-events:none;overflow:visible;
+}
+
+/* realm columns */
+.realm{border-radius:14px;padding:10px 10px 14px;border:1px solid transparent}
+.realm.ped{background:var(--ped-bg);border-color:var(--ped-edge)}
+.realm.adm{background:var(--adm-bg);border-color:var(--adm-edge)}
+.realm.brd{background:var(--brd-bg);border-color:var(--brd-edge)}
+.realm-head{width:100%;padding:8px 8px 10px;text-align:center}
+.realm-head:disabled{cursor:default;opacity:1}
+.realm-head:focus-visible{outline:3px solid var(--gold);outline-offset:-2px;border-radius:10px}
+.realm-name{
+  display:block;
+  font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:19px;color:var(--ink);
+}
+.realm-tag{display:block;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);margin-top:2px}
+.rchev{display:none}
+.chair-slot{display:flex;justify-content:center;margin:2px 0 12px}
+
+/* group cards */
+.group{
+  background:rgba(255,255,255,.66);border:1px solid rgba(0,0,0,.07);
+  border-radius:10px;padding:9px 9px 10px;margin-bottom:10px;
+}
+.group-title{
+  font-size:10.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--ink-soft);margin-bottom:7px;padding-left:2px;
+}
+.roles{display:flex;flex-wrap:wrap;gap:6px}
+
+/* role buttons */
+.role{
+  position:relative;background:var(--card);border:1.5px solid rgba(0,0,0,.16);
+  border-radius:8px;padding:6px 10px;font-size:12.5px;font-weight:600;line-height:1.25;
+  color:var(--ink);text-align:left;
+  transition:opacity .24s ease, box-shadow .18s ease, border-color .18s ease, transform .18s ease, filter .24s ease;
+}
+.role:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.role.chair{
+  border-radius:999px;padding:7px 18px;font-size:13px;
+  border-width:2px;
+}
+.ped .role.chair{border-color:var(--ped-edge);background:#fff}
+.adm .role.chair{border-color:var(--adm-edge);background:#fff}
+.brd .role.chair{border-color:var(--brd-edge);background:#fff}
+.role.ptc{
+  background:var(--purple-soft);border-color:var(--purple);color:var(--purple);
+}
+/* interaction states */
+body.focused .role.dim{opacity:.2;filter:saturate(.4)}
+.role.partner{border-color:var(--purple);box-shadow:0 0 0 1.5px var(--purple) inset}
+.role.selected{
+  background:var(--purple);border-color:var(--purple);color:#fff;
+  box-shadow:0 0 0 3px var(--gold);transform:scale(1.03);z-index:3;
+}
+/* The realm-scoped chair rules above are 0-3-0 and outrank .role.selected
+   (0-2-0), so a selected chair kept its white background and took the
+   selected state's white text. Match at 0-4-0 — deliberately out-ranking
+   them rather than leaning on source order. */
+.ped .role.chair.selected,
+.adm .role.chair.selected,
+.brd .role.chair.selected{
+  background:var(--purple);
+  border-color:var(--purple);
+  color:#fff;
+}
+.role.selected.ptc{color:#fff}
+/* traced: lit, and badged with its place in the sequence */
+.role.traced{
+  border-color:var(--purple);
+  box-shadow:0 0 0 1.5px var(--purple) inset, 0 2px 10px rgba(84,45,92,.18);
+}
+.role .seq{
+  position:absolute;top:-9px;left:-9px;width:21px;height:21px;border-radius:999px;
+  background:var(--purple);color:#fff;border:2px solid #fff;
+  font-size:11px;font-weight:700;line-height:1;
+  display:grid;place-items:center;z-index:4;
+}
+
+/* wires */
+.wire{fill:none;stroke:var(--purple);stroke-width:2;stroke-linecap:round;opacity:.85}
+.wire.ptcline{stroke-dasharray:5 6;opacity:.6}
+@media (prefers-reduced-motion: no-preference){
+  .wire.draw{stroke-dasharray:1200;stroke-dashoffset:1200;animation:draw .7s ease forwards}
+  .wire.ptcline.draw{stroke-dasharray:5 6;stroke-dashoffset:0;animation:fadein .5s ease forwards;opacity:0}
+  @keyframes draw{to{stroke-dashoffset:0}}
+  @keyframes fadein{to{opacity:.6}}
+}
+
+/* ---------- detail panel ---------- */
+.panel{
+  position:sticky;top:14px;background:var(--card);border:1px solid var(--line);
+  border-radius:14px;padding:16px 16px 14px;min-height:220px;
+  box-shadow:0 2px 14px rgba(43,36,48,.06);
+}
+.panel-empty{color:var(--ink-soft);font-size:14px}
+.panel-empty .hand{font-size:26px;display:block;margin-bottom:8px}
+.panel-realm{font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft)}
+.panel h2{
+  font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:21px;color:var(--purple);
+  line-height:1.15;margin:3px 0 6px;
+}
+.panel .desc{font-size:13.5px;color:var(--ink);margin-bottom:12px}
+.panel .conduit{
+  font-size:12.5px;background:var(--purple-soft);border-radius:8px;padding:8px 10px;
+  color:var(--purple);margin-bottom:12px;
+}
+.panel-section-label{
+  font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ink-soft);margin:2px 0 8px;display:flex;justify-content:space-between;align-items:center;
+}
+.clearfilter{
+  font-size:11px;font-weight:700;color:var(--purple);text-decoration:underline;text-transform:none;letter-spacing:0;
+  padding:12px 4px;margin:-12px -4px;
+}
+.decision{
+  border:1px solid var(--line);border-radius:10px;margin-bottom:8px;overflow:hidden;background:#fff;
+}
+.decision>button{
+  width:100%;text-align:left;padding:9px 11px;font-size:13.5px;font-weight:600;
+  display:flex;gap:8px;align-items:baseline;justify-content:space-between;
+}
+.decision .dgroup{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);white-space:nowrap}
+.decision.open{border-color:var(--purple);box-shadow:0 0 0 1px var(--purple)}
+.dbody{display:none;padding:0 11px 11px;font-size:13px}
+.decision.open .dbody{display:block}
+.dbody .plain{color:var(--ink-soft);margin-bottom:8px}
+.dbody .collab{
+  background:var(--paper);border-left:3px solid var(--gold);border-radius:6px;
+  padding:7px 9px;margin-bottom:9px;
+}
+.who{display:flex;flex-direction:column;gap:5px}
+.who .row{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.fn{
+  font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  border:1.5px solid var(--purple);color:var(--purple);border-radius:999px;padding:1.5px 8px;white-space:nowrap;
+}
+.fn.home{background:var(--gold);border-color:var(--gold-deep);color:#4A3B00}
+.who .nm{font-weight:600}
+.who .nm.you{color:var(--purple)}
+.src{font-size:11px;color:var(--ink-soft);margin-top:9px}
+.nopaths{
+  font-size:13px;color:var(--ink);background:var(--paper);border:1px dashed var(--line);
+  border-radius:10px;padding:10px 12px;
+}
+.panel .close{
+  position:absolute;top:6px;right:8px;width:44px;height:44px;font-size:20px;
+  color:var(--ink-soft);line-height:1;display:none;
+}
+/* the trace panel reuses the stepper, scaled to 350px */
+.panel .stepper{margin-top:10px}
+.panel .stepper .pstep{padding:10px 11px;margin-bottom:8px}
+.panel .stepper .pstep .plabel{font-size:13.5px}
+.panel .stepper .pstep .ptext{font-size:12.5px}
+.panel .stepper .pstep.lead{padding:12px}
+.panel .stepper .pstep.lead .plabel{font-size:17px}
+.panel .stepper .pstep.lead .ptext{font-size:13px;margin-top:5px}
+.panel .stepper .reviewline{font-size:12.5px}
+
+/* ---------- currents + footer ---------- */
+.currents{
+  max-width:1280px;margin:0 auto;padding:0 22px;display:flex;gap:18px;justify-content:center;
+  font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);
+}
+.currents span::after{content:" →";color:var(--gold-deep)}
+footer{
+  max-width:1280px;margin:10px auto 0;padding:18px 22px 60px;color:var(--ink-soft);font-size:12.5px;
+  border-top:1px solid var(--line);
+}
+footer .frame{max-width:78ch;margin-bottom:10px}
+footer b{color:var(--ink)}
+footer .ptcnote{color:var(--purple);font-weight:600}
+
+/* ============================================================
+   HOVER — every hover style lives here, so nothing is hover-only.
+   Touch devices never match this query and never get stuck states.
+   ============================================================ */
+@media (hover:hover) and (pointer:fine){
+  /* Scoped against the selected state: .tab:hover and .tab[aria-selected="true"]
+     are both 0-2-0, so this block's source position alone used to win and
+     painted purple text onto the selected purple chip. A selected chip now
+     simply keeps its selected appearance under the cursor. */
+  .tab:not([aria-selected="true"]):hover{border-color:var(--purple);color:var(--purple)}
+  .scard:hover{border-color:var(--purple);box-shadow:0 2px 10px rgba(84,45,92,.12)}
+  .sresult:hover{border-color:var(--purple);box-shadow:0 2px 10px rgba(84,45,92,.12)}
+  .backlink:hover{text-decoration:underline}
+  .branchopt:hover{border-color:var(--purple)}
+  .journey>button:hover{background:var(--paper)}
+  .tracebtn:hover{background:var(--purple-soft)}
+  .role:hover{border-color:var(--purple);box-shadow:0 1px 6px rgba(84,45,92,.18)}
+  .decision>button:hover{background:var(--paper)}
+  .realm-head:not(:disabled):hover .realm-name{color:var(--purple)}
+}
+
+/* ============================================================
+   TOUCH — 44px minimum on anything tappable.
+   ============================================================ */
+@media (pointer:coarse), (max-width:1020px){
+  .role{min-height:44px;display:inline-flex;align-items:center;padding:8px 12px;font-size:13px}
+  .role.chair{min-height:44px;padding:8px 18px}
+  .decision>button{min-height:44px}
+}
+
+/* ---------- responsive ---------- */
+@media (max-width:1020px){
+  .stage{grid-template-columns:1fr}
+  .board{grid-template-columns:1fr;gap:10px}
+  /* option C: no wires at this width — the stacked-column wires were noise */
+  #wires{display:none}
+  .panel{
+    position:fixed;left:10px;right:10px;bottom:10px;top:auto;z-index:50;
+    max-height:46vh;overflow:auto;display:none;
+    box-shadow:0 -6px 30px rgba(43,36,48,.25);
+  }
+  .panel.show{display:block}
+  .panel .close{display:block}
+
+  /* option C: realms become an accordion */
+  .realm{padding:0;overflow:hidden}
+  .realm-head{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    min-height:60px;padding:12px 14px;text-align:left;
+  }
+  .realm-head .rh-text{text-align:left}
+  .rchev{
+    display:grid;place-items:center;flex:none;width:26px;height:26px;
+    color:var(--purple);font-size:15px;transition:transform .2s ease;
+  }
+  .realm.open .rchev{transform:rotate(180deg)}
+  .realm-body{display:none;padding:0 10px 12px}
+  .realm.open .realm-body{display:block}
+}
+@media (max-width:560px){
+  header{padding:24px 16px 8px}
+  .viewtabs{padding:0 16px;margin-top:14px}
+  .door,.signpost,.pathway{padding-left:16px;padding-right:16px}
+  .explore-intro{padding:14px 16px 0}
+  .stage{padding:0 16px 30px}
+  .currents{padding:0 16px}
+  footer{padding:18px 16px 60px}
+  .scard{font-size:16.5px}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="kicker">Emerson Waldorf School · Interim Governance 2026–27</div>
+  <h1>How Decisions Move</h1>
+  <p class="subtitle">An interactive companion to the Interim Governance Structure.</p>
+  <div class="draftbar">
+    <span class="badge">Working draft v0.2.4</span>
+    <span class="badge quiet">Built on Structure v0.2 + Decision Matrix draft</span>
+    <span class="badge quiet">For committee review — not yet approved</span>
+  </div>
+</header>
+
+<nav class="viewtabs" role="tablist" aria-label="Views">
+  <button class="tab" role="tab" id="tabDoor" data-view="door" aria-selected="true" aria-controls="doorView">Start with a situation</button>
+  <button class="tab" role="tab" id="tabExplore" data-view="explore" aria-selected="false" aria-controls="exploreView">Explore the structure</button>
+</nav>
+
+<!-- ---------- view 1: the situation door ---------- -->
+<section class="door" id="doorView" role="tabpanel" aria-labelledby="tabDoor">
+  <p class="urlnote" id="urlNote" hidden>That link didn’t match anything.</p>
+  <div class="searchwrap">
+    <div class="searchbox">
+      <svg class="sicon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
+        <circle cx="10.5" cy="10.5" r="7"></circle><line x1="15.8" y1="15.8" x2="21" y2="21"></line>
+      </svg>
+      <input id="q" type="search" autocomplete="off" spellcheck="false"
+             placeholder="Search situations and roles"
+             aria-label="Search situations and roles" aria-controls="results">
+      <button id="qClear" type="button" aria-label="Clear search" hidden>×</button>
+    </div>
+  </div>
+  <div class="cards" id="cards"></div>
+  <div class="results" id="results" aria-live="polite" hidden></div>
+</section>
+
+<!-- ---------- view 2: a single signpost ---------- -->
+<section class="signpost" id="signpostView" aria-live="polite" hidden>
+  <div id="signpostBody"></div>
+</section>
+
+<!-- ---------- view 3: the pathway screen (mobile trace) ---------- -->
+<section class="pathway" id="pathwayView" aria-live="polite" hidden>
+  <div id="pathwayBody"></div>
+</section>
+
+<!-- ---------- view 4: the map ---------- -->
+<section id="exploreView" role="tabpanel" aria-labelledby="tabExplore" hidden>
+  <div class="explore-intro">
+    <p class="subtitle">Every role below belongs to one of three realms that share the work of the school — no realm sits above another.</p>
+    <p class="howto"><b>Tap any role</b> to see who it works with when decisions are made — and what part each plays. Tap a decision in the side panel to trace just that pathway. Tap the background (or press Esc) to reset.</p>
+  </div>
+
+  <div class="stage">
+    <div class="boardwrap" id="boardwrap">
+      <div class="board" id="board"></div>
+      <svg id="wires" aria-hidden="true"></svg>
+    </div>
+
+    <aside class="panel" id="panel" aria-live="polite">
+      <button class="close" id="panelClose" aria-label="Close panel">×</button>
+      <div id="panelBody">
+        <div class="panel-empty">
+          <span class="hand">☞</span>
+          <b>Nothing selected yet.</b><br>
+          Choose a role on the map to see its decision pathways — who it collaborates with, who is consulted, and who keeps families informed.
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <div class="currents">
+    <span>cultural current</span><span>economic current</span>
+  </div>
+</section>
+
+<footer>
+  <p class="frame"><b>Read this as spheres of coverage, not a reporting chart.</b> Placement, ordering, and grouping imply no rank. Authority, responsibility, and accountability are deliberately not fixed here — that work belongs to the decision-making matrix and the policies &amp; procedures groups, and the pathways shown are drawn from their working drafts.</p>
+  <p class="frame">Committees (pedagogical and board) are not shown as standing bodies: each committee's responsibility, authority, and accountability are scoped at its creation.</p>
+  <p class="frame ptcnote">The Parent Teacher Council is one body with three touchpoints — class reps · co-chairs &amp; treasurer · rep to board. Selecting any PTC role traces the thread between all three.</p>
+  <p class="frame">Sources: Interim Governance Structure v0.2 (Interim Structure Sub-Group, July 2026) · EWS Governance Resolution Framework, Suggested Decision Matrix (working draft) · Family Handbook 2026–27. Roles are shown by title only. Decision pathways marked “draft” are still being aligned across sub-groups.</p>
+</footer>
+
+<script>
+/* ============================================================
+   DATA — inlined from ews-pathways-data.js by build.js.
+   Do not edit here; edit the data file and re-run: node build.js
+   ============================================================ */
+/* @inline ews-pathways-data.js */
+</script>
+
+<script>
+/* ============================================================
+   RENDERING + INTERACTION — no content lives below this line
+   ============================================================ */
+const PARAMS = new URLSearchParams(location.search);
+const DRAFT = PARAMS.get("draft") !== null && PARAMS.get("draft") !== "0";
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+/* One breakpoint decides the whole form factor: at ≤1020px the map has
+   no wires and traces open their own screen instead. */
+const MQ = window.matchMedia("(max-width:1020px)");
+const isMobile = () => MQ.matches;
+
+const cardsEl = document.getElementById("cards");
+const doorView = document.getElementById("doorView");
+const signpostView = document.getElementById("signpostView");
+const signpostBody = document.getElementById("signpostBody");
+const pathwayView = document.getElementById("pathwayView");
+const pathwayBody = document.getElementById("pathwayBody");
+const exploreView = document.getElementById("exploreView");
+const tabs = [...document.querySelectorAll(".tab")];
+
+let view = "door";          // "door" | "signpost" | "pathway" | "explore"
+let branchPick = null;      // index into SITUATIONS[n].branches
+let traceSituation = null;  // situation id being traced on the map
+let pathwayId = null;       // situation id on the pathway screen
+let situationId = null;     // situation id on the signpost screen
+
+const urlNote = document.getElementById("urlNote");
+
+/* ============================================================
+   DEEP LINKS — every view is addressable, so a ParentSquare post
+   or an email reply can point straight at an answer.
+
+     ?s=<situationId>        that signpost
+     ?role=<roleId>          the map, that role selected
+     ?view=explore           the map
+     ?s=<id>&view=explore    trace that situation — the map draws it on
+                             a desktop, the pathway screen on a phone
+     ?draft=1                committee-review flags
+
+   The URL is cosmetic: it is rewritten to match the view, never read
+   to drive navigation mid-session. That is what keeps file:// working.
+   ============================================================ */
+function syncURL(){
+  const p = new URLSearchParams();
+  if(view === "signpost" && situationId) p.set("s", situationId);
+  else if(view === "pathway" && pathwayId){ p.set("s", pathwayId); p.set("view","explore"); }
+  else if(view === "explore"){
+    if(traceSituation){ p.set("s", traceSituation); p.set("view","explore"); }
+    else if(selected) p.set("role", selected);
+    else p.set("view","explore");
+  }
+  if(DRAFT) p.set("draft","1");
+  const qs = p.toString();
+  try{
+    const u = new URL(location.href);
+    u.search = qs;
+    history.replaceState(null, "", u.toString());
+  }catch(e){
+    /* file:// documents have an opaque origin and some engines refuse to
+       rewrite the URL there. Nothing to do and nothing to fix: links INTO
+       the file still resolve, the address bar just stops keeping up. */
+  }
+}
+
+/* Runs once at load, and again on popstate if a history entry survives. */
+function routeFromURL(){
+  const p = new URLSearchParams(location.search);
+  const sid = p.get("s") || null;        // "?s=" names nothing; that isn't a bad id
+  const rid = p.get("role") || null;
+  const wantExplore = p.get("view") === "explore";
+
+  const badS = sid !== null && !SITUATIONS.some(x=>x.id===sid);
+  const badR = rid !== null && !ROLES[rid];
+  if(badS || badR){                      // a link that pointed at nothing
+    showView("door");
+    urlNote.hidden = false;
+    return;
+  }
+  if(rid){ openRole(rid); return; }      // role wins if both are given
+  if(sid){
+    const s = SITUATIONS.find(x=>x.id===sid);
+    if(wantExplore && s.kind === "process") trace(sid);
+    else openSituation(sid);
+    return;
+  }
+  if(wantExplore){ showView("explore"); return; }
+  showView("door");
+}
+
+/* ============================================================
+   VIEW 1 — the situation door
+   ============================================================ */
+SITUATIONS.forEach(s=>{
+  const b = document.createElement("button");
+  b.className = "scard";
+  b.dataset.s = s.id;
+  b.innerHTML = `<span>${esc(s.card)}</span><span class="chev" aria-hidden="true">→</span>`;
+  b.addEventListener("click",()=>openSituation(s.id));
+  cardsEl.appendChild(b);
+});
+
+/* ============================================================
+   SEARCH — vanilla, offline, no network.
+   Corpus: every situation (card + keywords) and every role
+   (label + group + realm name + ROLE_KEYWORDS). Scored exact >
+   prefix > substring against EVERY term, not just the first;
+   situations outrank roles on a tie, data order breaks the rest.
+   ============================================================ */
+const NORM = s => String(s).toLowerCase().replace(/[^\p{L}\p{N}]+/gu," ").trim();
+const RESULT_CAP = 12;
+/* Dropped from multi-word queries only, and only when something else
+   survives — otherwise "of" in "board of trustees" prefix-matches
+   "office" and drags the whole front desk into the results. Nothing
+   here is a keyword in the data; who/why/what are, so they stay. */
+const STOPWORDS = new Set(["a","an","and","are","as","at","be","but","by","for","from",
+  "in","is","it","its","of","on","or","that","the","to","was","with"]);
+
+const CORPUS = [];
+SITUATIONS.forEach((s,i)=>{
+  CORPUS.push({
+    type:"situation", id:s.id, order:i, title:s.card,
+    terms:[...new Set([NORM(s.card), ...(s.keywords||[]).map(NORM)].filter(Boolean))]
+  });
+});
+Object.keys(ROLES).forEach((id,i)=>{
+  const r = ROLES[id];
+  const terms = [NORM(r.label), NORM(REALMS[r.realm].name)];
+  if(r.group) terms.push(NORM(r.group));
+  (ROLE_KEYWORDS[id] || []).forEach(k=>terms.push(NORM(k)));
+  CORPUS.push({
+    type:"role", id, order:i, title:r.label, realm:r.realm,
+    sub:REALMS[r.realm].name + (r.group ? " · " + r.group : ""),
+    terms:[...new Set(terms.filter(Boolean))]
+  });
+});
+
+function tierOf(token, term){
+  if(term === token) return 3;                          // the whole term
+  const words = term.split(" ");
+  if(words.includes(token)) return 3;                   // a whole word of it
+  if(term.startsWith(token)) return 2;                  // prefix of the term
+  if(words.some(w=>w.startsWith(token))) return 2;      // prefix of a word
+  if(term.includes(token)) return 1;                    // anywhere inside
+  return 0;
+}
+function searchCorpus(q){
+  let tokens = NORM(q).split(" ").filter(Boolean);
+  const kept = tokens.filter(t=>!STOPWORDS.has(t));
+  if(kept.length) tokens = kept;
+  if(!tokens.length) return [];
+  const hits = [];
+  for(const e of CORPUS){
+    let score = 0, matched = 0;
+    for(const tk of tokens){
+      let best = 0;
+      for(const term of e.terms){
+        const t = tierOf(tk, term);
+        if(t > best) best = t;
+        if(best === 3) break;
+      }
+      if(best){ score += best; matched++; }
+    }
+    if(matched) hits.push({e, score});
+  }
+  hits.sort((a,b)=>
+    b.score - a.score ||
+    (a.e.type === b.e.type ? 0 : a.e.type === "situation" ? -1 : 1) ||
+    a.e.order - b.e.order
+  );
+  return hits.slice(0, RESULT_CAP);
+}
+
+const qEl = document.getElementById("q");
+const qClear = document.getElementById("qClear");
+const resultsEl = document.getElementById("results");
+
+function resultRow(e){
+  if(e.type === "situation"){
+    return `<button class="sresult sit" data-id="${e.id}" data-type="situation">
+      <span class="rtitle">${esc(e.title)}</span><span class="chev" aria-hidden="true">→</span>
+    </button>`;
+  }
+  return `<button class="sresult" data-realm="${e.realm}" data-id="${e.id}" data-type="role">
+    <span><span class="rtitle">${esc(e.title)}</span><span class="rsub">${esc(e.sub)}</span></span>
+    <span class="chev" aria-hidden="true">→</span>
+  </button>`;
+}
+function emptyState(){
+  const line = "Didn’t find it? That’s useful for the committee to know.";
+  const body = CONFIG.feedbackEmail
+    ? `<a href="mailto:${esc(CONFIG.feedbackEmail)}">${line}</a>`
+    : line;
+  return `<div class="emptystate">${body}</div>`;
+}
+function renderSearch(){
+  const raw = qEl.value.trim();
+  qClear.hidden = !raw;
+  if(raw.length < 2){                       // live results after 2+ characters
+    resultsEl.hidden = true;
+    resultsEl.innerHTML = "";
+    cardsEl.hidden = false;
+    return;
+  }
+  cardsEl.hidden = true;
+  resultsEl.hidden = false;
+  const hits = searchCorpus(raw);
+  resultsEl.innerHTML = hits.length ? hits.map(h=>resultRow(h.e)).join("") : emptyState();
+  resultsEl.querySelectorAll(".sresult").forEach(b=>{
+    b.addEventListener("click",ev=>{
+      ev.stopPropagation();
+      if(b.dataset.type === "situation") openSituation(b.dataset.id);
+      else openRole(b.dataset.id);
+    });
+  });
+}
+/* A role result lands on that role, selected, in the map. */
+function openRole(id){
+  showView("explore");
+  toggleRole(id);
+  requestAnimationFrame(()=>{
+    const btn = btnOf(id);
+    if(btn) btn.scrollIntoView({block:"center"});
+  });
+}
+qEl.addEventListener("input", renderSearch);
+qEl.addEventListener("keydown", e=>{
+  if(e.key === "Enter"){
+    e.preventDefault();
+    const first = resultsEl.querySelector(".sresult");
+    if(first) first.click();
+  } else if(e.key === "Escape"){
+    qEl.value = ""; renderSearch();
+  }
+});
+qClear.addEventListener("click", e=>{
+  e.stopPropagation();
+  qEl.value = ""; renderSearch(); qEl.focus();
+});
+
+function showView(v, keepTrace){
+  view = v;
+  if(!keepTrace) clearAll();
+  doorView.hidden     = v !== "door";
+  signpostView.hidden = v !== "signpost";
+  pathwayView.hidden  = v !== "pathway";
+  exploreView.hidden  = v !== "explore";
+  document.getElementById("tabDoor").setAttribute("aria-selected", String(v !== "explore"));
+  document.getElementById("tabExplore").setAttribute("aria-selected", String(v === "explore"));
+  urlNote.hidden = true;              // any deliberate move retires the bad-link note
+  window.scrollTo(0,0);
+  syncURL();
+}
+tabs.forEach(t=>t.addEventListener("click",e=>{
+  e.stopPropagation();
+  showView(t.dataset.view);
+}));
+
+/* ============================================================
+   VIEW 2 — signposts
+   ============================================================ */
+function openSituation(id){
+  const s = SITUATIONS.find(x=>x.id===id);
+  if(!s) return;
+  branchPick = null;
+  situationId = id;
+  renderSignpost(s);
+  showView("signpost");
+}
+
+function flagsHTML(s){
+  if(!DRAFT || !s.flags || !s.flags.length) return "";
+  return s.flags.map(f=>
+    `<div class="flagchip"><span class="tag">For committee review</span><span>${esc(f)}</span></div>`
+  ).join("");
+}
+
+function personHTML(label, why, num){
+  return `<div class="person">
+    ${num ? `<span class="pnum" aria-hidden="true">${num}</span>` : ""}
+    <div>
+      <div class="who-label">${esc(label)}</div>
+      <p class="why">${esc(why)}</p>
+    </div>
+  </div>`;
+}
+
+function altHTML(alt){
+  return `<div class="person alt">
+    <div class="alt-eyebrow">Also a right first call</div>
+    <div class="who-label">${esc(alt.label)}</div>
+    <p class="why">${esc(alt.why)}</p>
+  </div>`;
+}
+
+/* The journey is the footnote: collapsed, small, numbered.
+   Steps continue the count from the signpost person (①), so the
+   numbers here start at 2 whenever a start person is shown. */
+function journeyHTML(s){
+  const steps = s.steps || [];
+  if(!steps.length && !s.review) return "";
+  const offset = (s.kind === "process" || s.kind === "contact") ? 2 : 1;
+  let inner = steps.map((st,i)=>
+    `<div class="step">
+      <span class="n" aria-hidden="true">${i+offset}</span>
+      <div>
+        <div class="slabel">${esc(st.label)}</div>
+        <p class="stext">${esc(st.text)}</p>
+      </div>
+    </div>`
+  ).join("");
+  if(s.review) inner += `<p class="reviewline">${esc(REVIEW_LINE)}</p>`;
+  if(s.kind === "process") inner +=
+    `<button class="tracebtn" id="traceBtn" type="button">
+      Trace this on the map <span class="tchev" aria-hidden="true">→</span>
+    </button>`;
+  return `<div class="journey" id="journey">
+    <button type="button" id="journeyToggle" aria-expanded="false" aria-controls="journeyBody">
+      <span>If it isn’t resolved →</span><span class="jchev" aria-hidden="true">▾</span>
+    </button>
+    <div class="journey-body" id="journeyBody">${inner}</div>
+  </div>`;
+}
+
+function renderSignpost(s){
+  let html = `<button class="backlink" id="backLink"><span aria-hidden="true">←</span> All situations</button>
+    <h2 class="sig-q">${esc(s.card)}</h2>
+    ${flagsHTML(s)}`;
+
+  if(s.kind === "process" || s.kind === "contact"){
+    const numbered = (s.steps && s.steps.length) ? 1 : null;
+    html += personHTML(s.start.label, s.start.why, numbered);
+    if(s.alt) html += altHTML(s.alt);
+    html += journeyHTML(s);
+  }
+  else if(s.kind === "list"){
+    html += `<div class="minilist">` + s.list.map(row=>
+      `<div class="listrow"><span class="l">${esc(row.label)}</span><span class="c">${esc(row.contact)}</span></div>`
+    ).join("") + `</div>`;
+  }
+  else if(s.kind === "branch"){
+    html += `<p class="branchprompt">${esc(s.branchPrompt)}</p>`;
+    html += s.branches.map((b,i)=>
+      `<button class="branchopt" data-branch="${i}" aria-pressed="${branchPick===i}">
+        <span>${esc(b.label)}</span><span class="dot" aria-hidden="true"></span>
+      </button>`
+    ).join("");
+    if(branchPick !== null){
+      const b = s.branches[branchPick];
+      html += `<div class="branchpick">${personHTML(b.person, b.why, null)}${journeyHTML(s)}</div>`;
+    }
+  }
+
+  html += `<p class="sigsrc">From: ${esc(s.src)}</p>`;
+  signpostBody.innerHTML = html;
+
+  document.getElementById("backLink").addEventListener("click",e=>{
+    e.stopPropagation(); showView("door");
+  });
+  signpostBody.querySelectorAll("[data-branch]").forEach(b=>{
+    b.addEventListener("click",e=>{
+      e.stopPropagation();
+      const i = Number(b.dataset.branch);
+      branchPick = (branchPick === i) ? null : i;
+      renderSignpost(s);
+      if(branchPick !== null) signpostBody.querySelector(".branchpick").scrollIntoView({block:"nearest"});
+    });
+  });
+  const jt = document.getElementById("journeyToggle");
+  if(jt) jt.addEventListener("click",e=>{
+    e.stopPropagation();
+    const j = document.getElementById("journey");
+    const open = j.classList.toggle("open");
+    jt.setAttribute("aria-expanded", String(open));
+  });
+  const tb = document.getElementById("traceBtn");
+  if(tb) tb.addEventListener("click",e=>{e.stopPropagation();trace(s.id);});
+}
+
+/* ============================================================
+   THE SEQUENCE — shared by the map trace and the stepper.
+   Index 0 is the first call (start, plus the alternate if there is
+   one — an alternate first call is still a first call). Every later
+   index is one step of steps[]. Position on the map never encodes
+   this; the badges do.
+   ============================================================ */
+function traceSequence(s){
+  const first = [...s.start.roles, ...(s.alt ? s.alt.roles : [])];
+  return [first, ...(s.steps || []).map(st=>st.roles)];
+}
+
+/* One stepper, two homes: the mobile pathway screen and the
+   desktop trace panel. Start person biggest, review line last. */
+function stepperHTML(s){
+  let html = `<div class="stepper">
+    <div class="pstep lead">
+      <span class="n" aria-hidden="true">1</span>
+      <div>
+        <div class="plabel">${esc(s.start.label)}</div>
+        <p class="ptext">${esc(s.start.why)}</p>
+      </div>
+    </div>`;
+  if(s.alt){
+    html += `<div class="pstep altstep">
+      <span class="n" aria-hidden="true">1</span>
+      <div>
+        <div class="alt-eyebrow">Also a right first call</div>
+        <div class="plabel">${esc(s.alt.label)}</div>
+        <p class="ptext">${esc(s.alt.why)}</p>
+      </div>
+    </div>`;
+  }
+  (s.steps || []).forEach((st,i)=>{
+    html += `<div class="pstep">
+      <span class="n" aria-hidden="true">${i+2}</span>
+      <div>
+        <div class="plabel">${esc(st.label)}</div>
+        <p class="ptext">${esc(st.text)}</p>
+      </div>
+    </div>`;
+  });
+  if(s.review) html += `<p class="reviewline">${esc(REVIEW_LINE)}</p>`;
+  return html + `</div>`;
+}
+
+/* Desktop traces the map; phones get their own screen. */
+function trace(sid){
+  const s = SITUATIONS.find(x=>x.id===sid);
+  if(!s || s.kind !== "process") return;
+  if(isMobile()){ showPathway(sid); return; }
+  showView("explore");
+  traceSituation = sid;
+  paintTrace(s);
+}
+
+/* ============================================================
+   VIEW 3 — the pathway screen (mobile)
+   ============================================================ */
+function showPathway(sid){
+  const s = SITUATIONS.find(x=>x.id===sid);
+  if(!s) return;
+  pathwayId = sid;
+  pathwayBody.innerHTML =
+    `<button class="backlink" id="pathBack"><span aria-hidden="true">←</span> Back to this situation</button>
+     <h2 class="sig-q">${esc(s.card)}</h2>
+     ${flagsHTML(s)}
+     ${stepperHTML(s)}
+     <p class="sigsrc">From: ${esc(s.src)}</p>`;
+  showView("pathway");
+  document.getElementById("pathBack").addEventListener("click",e=>{
+    e.stopPropagation(); openSituation(sid);
+  });
+}
+
+/* ============================================================
+   VIEW 4 — the map
+   ============================================================ */
+const PTC_IDS = Object.keys(ROLES).filter(id=>ROLES[id].ptc);
+
+const board = document.getElementById("board");
+const wires = document.getElementById("wires");
+const panel = document.getElementById("panel");
+const panelBody = document.getElementById("panelBody");
+const boardwrap = document.getElementById("boardwrap");
+
+let selected = null;        // role id
+let activeDecision = null;  // decision id (filter within selection)
+
+/* ---- build the board ---- */
+for(const key of ["ped","adm","brd"]){
+  const realm = REALMS[key];
+  const col = document.createElement("section");
+  col.className = "realm "+realm.cls;
+
+  /* The head is the accordion control at ≤1020px and inert above it. */
+  const head = document.createElement("button");
+  head.className = "realm-head";
+  head.setAttribute("aria-expanded","true");
+  head.innerHTML = `<span class="rh-text">
+      <span class="realm-name">${realm.name}</span>
+      <span class="realm-tag">${realm.tag}</span>
+    </span><span class="rchev" aria-hidden="true">▾</span>`;
+  head.addEventListener("click",e=>{
+    e.stopPropagation();
+    const open = col.classList.toggle("open");
+    head.setAttribute("aria-expanded", String(open));
+  });
+  col.appendChild(head);
+
+  const body = document.createElement("div");
+  body.className = "realm-body";
+
+  // chair
+  const chairId = Object.keys(ROLES).find(id=>ROLES[id].realm===key && ROLES[id].chair);
+  if(chairId){
+    const slot=document.createElement("div");slot.className="chair-slot";
+    slot.appendChild(makeRoleBtn(chairId,true));
+    body.appendChild(slot);
+  }
+  // groups
+  for(const g of GROUP_ORDER[key]){
+    const ids = Object.keys(ROLES).filter(id=>ROLES[id].realm===key && ROLES[id].group===g);
+    if(!ids.length) continue;
+    const card=document.createElement("div");card.className="group";
+    card.innerHTML=`<div class="group-title">${g}</div>`;
+    const wrap=document.createElement("div");wrap.className="roles";
+    ids.forEach(id=>wrap.appendChild(makeRoleBtn(id,false)));
+    card.appendChild(wrap);
+    body.appendChild(card);
+  }
+  col.appendChild(body);
+  board.appendChild(col);
+}
+
+function makeRoleBtn(id, isChair){
+  const r = ROLES[id];
+  const b = document.createElement("button");
+  b.className = "role"+(isChair?" chair":"")+(r.ptc?" ptc":"");
+  const lab = document.createElement("span");
+  lab.className = "rlabel";
+  lab.textContent = r.label;
+  b.appendChild(lab);
+  b.dataset.role = id;
+  b.setAttribute("aria-pressed","false");
+  b.addEventListener("click",e=>{e.stopPropagation();toggleRole(id);});
+  return b;
+}
+const btnOf = id => board.querySelector(`[data-role="${id}"]`);
+
+/* ---- form factor ---- */
+function applyFormFactor(){
+  const m = isMobile();
+  document.querySelectorAll(".realm").forEach(col=>{
+    const head = col.querySelector(".realm-head");
+    if(m){
+      head.disabled = false;
+      head.setAttribute("aria-expanded", String(col.classList.contains("open")));
+    } else {
+      head.disabled = true;                       // inert: nothing is collapsed above 1020px
+      head.setAttribute("aria-expanded","true");
+    }
+  });
+  if(m) wires.innerHTML = "";                     // option C: no wires at this width
+}
+applyFormFactor();
+
+/* Driven from both matchMedia and resize: some engines don't dispatch the
+   media change when the viewport is set programmatically, and a map with
+   stale wires is worse than a redundant listener. */
+let lastMobile = isMobile();
+function onViewportChange(){
+  const now = isMobile();
+  if(now !== lastMobile){
+    lastMobile = now;
+    applyFormFactor();
+    if(view === "explore" && traceSituation && now){
+      showPathway(traceSituation);                // trace follows you down to the phone
+      return;
+    }
+    if(view === "pathway" && !now){
+      trace(pathwayId);                           // ...and back up to the map
+      return;
+    }
+  }
+  if(view !== "explore" || now) return;
+  if(traceSituation) drawTraceWires(traceSequence(SITUATIONS.find(x=>x.id===traceSituation)));
+  else if(selected) drawWires(partnersFor(selected,activeDecision), ROLES[selected].ptc);
+}
+MQ.addEventListener("change", onViewportChange);
+
+/* ---- decision lookups ---- */
+function decisionsFor(id){
+  return DECISIONS.filter(d=>d.roles.some(r=>r[0]===id));
+}
+function partnersFor(id, decisionId){
+  const ds = decisionId ? DECISIONS.filter(d=>d.id===decisionId) : decisionsFor(id);
+  const set = new Set();
+  ds.forEach(d=>d.roles.forEach(r=>{ if(r[0]!==id) set.add(r[0]); }));
+  return set;
+}
+
+/* ---- selection ---- */
+function toggleRole(id){
+  if(selected===id && !activeDecision){ clearAll(); syncURL(); return; }
+  traceSituation = null;
+  selected = id; activeDecision = null;
+  paint();
+}
+function setDecisionFilter(did){
+  activeDecision = (activeDecision===did) ? null : did;
+  paint(false);
+}
+function clearBadges(){
+  board.querySelectorAll(".role .seq").forEach(el=>el.remove());
+}
+function clearAll(){
+  selected=null; activeDecision=null; traceSituation=null;
+  document.body.classList.remove("focused");
+  clearBadges();
+  board.querySelectorAll(".role").forEach(b=>{
+    b.classList.remove("dim","partner","selected","traced");
+    b.setAttribute("aria-pressed","false");
+  });
+  wires.innerHTML="";
+  panel.classList.remove("show");
+  panelBody.innerHTML = `<div class="panel-empty"><span class="hand">☞</span><b>Nothing selected yet.</b><br>Choose a role on the map to see its decision pathways — who it collaborates with, who is consulted, and who keeps families informed.</div>`;
+}
+
+function paint(rebuildPanel=true){
+  const partners = partnersFor(selected, activeDecision);
+  const isPTC = ROLES[selected].ptc;
+  document.body.classList.add("focused");
+  clearBadges();
+  board.querySelectorAll(".role").forEach(b=>{
+    const id=b.dataset.role;
+    b.classList.remove("dim","partner","selected","traced");
+    b.setAttribute("aria-pressed", String(id===selected));
+    if(id===selected){ b.classList.add("selected"); }
+    else if(partners.has(id) || (isPTC && PTC_IDS.includes(id))){ b.classList.add("partner"); }
+    else{ b.classList.add("dim"); }
+  });
+  if(!isMobile()) drawWires(partners, isPTC);
+  if(rebuildPanel) buildPanel();
+  else refreshPanelState();
+  if(isMobile()){
+    openRealmOf(selected);
+    panel.classList.add("show");
+  }
+  syncURL();
+}
+function openRealmOf(id){
+  const btn = btnOf(id);
+  if(!btn) return;
+  const col = btn.closest(".realm");
+  if(col && !col.classList.contains("open")){
+    col.classList.add("open");
+    col.querySelector(".realm-head").setAttribute("aria-expanded","true");
+  }
+}
+
+/* ---- the map trace (desktop) ---- */
+function paintTrace(s){
+  const seq = traceSequence(s);
+  const lit = new Map();                          // roleId → place in the sequence
+  seq.forEach((ids,i)=>ids.forEach(id=>{ if(!lit.has(id)) lit.set(id,i+1); }));
+
+  document.body.classList.add("focused");
+  clearBadges();
+  board.querySelectorAll(".role").forEach(b=>{
+    const id = b.dataset.role;
+    b.classList.remove("dim","partner","selected","traced");
+    b.setAttribute("aria-pressed","false");
+    if(lit.has(id)){
+      b.classList.add("traced");
+      const sp = document.createElement("span");
+      sp.className = "seq";
+      sp.setAttribute("aria-hidden","true");
+      sp.textContent = lit.get(id);
+      b.appendChild(sp);
+    } else {
+      b.classList.add("dim");
+    }
+  });
+  drawTraceWires(seq);
+  buildTracePanel(s);
+  syncURL();
+}
+
+function buildTracePanel(s){
+  panelBody.innerHTML =
+    `<button class="backlink" id="traceBack"><span aria-hidden="true">←</span> Back to this situation</button>
+     <h2>${esc(s.card)}</h2>
+     ${stepperHTML(s)}
+     <p class="src">From: ${esc(s.src)}</p>`;
+  document.getElementById("traceBack").addEventListener("click",e=>{
+    e.stopPropagation(); openSituation(s.id);
+  });
+}
+
+/* ---- wires ---- */
+function centerOf(el){
+  const wb = boardwrap.getBoundingClientRect();
+  const r = el.getBoundingClientRect();
+  return {x:r.left-wb.left+r.width/2, y:r.top-wb.top+r.height/2,
+          l:r.left-wb.left, rt:r.right-wb.left, t:r.top-wb.top, b:r.bottom-wb.top, w:r.width, h:r.height};
+}
+function sizeWires(){
+  const wb = boardwrap.getBoundingClientRect();
+  wires.setAttribute("width", wb.width);
+  wires.setAttribute("height", boardwrap.scrollHeight);
+  wires.setAttribute("viewBox", `0 0 ${wb.width} ${boardwrap.scrollHeight}`);
+}
+function drawWires(partners, isPTC){
+  wires.innerHTML="";
+  if(isMobile()) return;
+  sizeWires();
+  const from = centerOf(btnOf(selected));
+  partners.forEach(pid=>{
+    addWire(from, centerOf(btnOf(pid)), false);
+  });
+  if(isPTC){
+    PTC_IDS.filter(pid=>pid!==selected && !partners.has(pid)).forEach(pid=>{
+      addWire(from, centerOf(btnOf(pid)), true);
+    });
+  }
+}
+/* Sequence wires only. Where a step holds several roles ("whichever fits
+   your child"), each role links to its nearest counterpart in the next
+   step, in both directions — so every role is on the thread and no
+   full mesh gets drawn. */
+function nearestIn(id, list){
+  const c = centerOf(btnOf(id));
+  let best=null, bd=Infinity;
+  list.forEach(o=>{
+    const oc = centerOf(btnOf(o));
+    const d = (oc.x-c.x)**2 + (oc.y-c.y)**2;
+    if(d<bd){ bd=d; best=o; }
+  });
+  return best;
+}
+function drawTraceWires(seq){
+  wires.innerHTML="";
+  if(isMobile()) return;
+  sizeWires();
+  for(let i=0;i<seq.length-1;i++){
+    const A=seq[i], B=seq[i+1];
+    if(!A.length || !B.length) continue;
+    const pairs = new Set();
+    A.forEach(a=>{ const b=nearestIn(a,B); if(b) pairs.add(a+"|"+b); });
+    B.forEach(b=>{ const a=nearestIn(b,A); if(a) pairs.add(a+"|"+b); });
+    pairs.forEach(p=>{
+      const [a,b] = p.split("|");
+      addWire(centerOf(btnOf(a)), centerOf(btnOf(b)), false);
+    });
+  }
+}
+function addWire(a,b,ptcline){
+  // connect nearest horizontal edges, curve gently
+  const fromRight = b.x > a.x;
+  const x1 = fromRight ? a.rt : a.l, y1 = a.y;
+  const x2 = fromRight ? b.l : b.rt, y2 = b.y;
+  const dx = Math.max(36, Math.abs(x2-x1)*0.42);
+  const c1x = x1 + (fromRight?dx:-dx), c2x = x2 + (fromRight?-dx:dx);
+  const p = document.createElementNS("http://www.w3.org/2000/svg","path");
+  p.setAttribute("d",`M ${x1} ${y1} C ${c1x} ${y1}, ${c2x} ${y2}, ${x2} ${y2}`);
+  p.setAttribute("class","wire draw"+(ptcline?" ptcline":""));
+  wires.appendChild(p);
+}
+
+/* ---- panel ---- */
+function buildPanel(){
+  const r = ROLES[selected];
+  const ds = decisionsFor(selected);
+  let html = `<div class="panel-realm">${REALMS[r.realm].name} realm${r.ptc?" · Parent Teacher Council":""}</div>
+    <h2>${r.label}</h2>
+    <p class="desc">${r.desc}</p>`;
+  if(r.conduit) html += `<div class="conduit">${r.conduit}</div>`;
+  if(r.ptc) html += `<div class="conduit">One body, three touchpoints — the dashed thread on the map links this role to the PTC's other touchpoints.</div>`;
+
+  if(ds.length){
+    html += `<div class="panel-section-label"><span>Decision pathways (${ds.length})</span>
+      <button class="clearfilter" id="clearFilter" style="display:${activeDecision?'inline':'none'}">show all</button></div>`;
+    for(const d of ds){
+      const open = activeDecision===d.id;
+      html += `<div class="decision${open?" open":""}" data-d="${d.id}">
+        <button data-open="${d.id}"><span>${d.title}</span><span class="dgroup">${d.group}</span></button>
+        <div class="dbody">
+          <p class="plain">${d.plain}</p>
+          <p class="collab">${d.collab}</p>
+          <div class="who">${whoRows(d)}</div>
+          <p class="src">From: ${d.src}</p>
+        </div>
+      </div>`;
+    }
+  } else {
+    html += `<div class="nopaths">No decision pathways are mapped for this role yet — the decision-making matrix is still a working draft. The role itself is part of the interim structure; its pathways will appear here as the matrix develops.</div>`;
+  }
+  panelBody.innerHTML = html;
+
+  panelBody.querySelectorAll("[data-open]").forEach(b=>{
+    b.addEventListener("click",e=>{e.stopPropagation();setDecisionFilter(b.dataset.open);});
+  });
+  const cf=document.getElementById("clearFilter");
+  if(cf) cf.addEventListener("click",e=>{e.stopPropagation();activeDecision=null;paint(false);});
+}
+function whoRows(d){
+  // merge multiple functions per role
+  const map = new Map();
+  d.roles.forEach(([rid,fn,note])=>{
+    if(!map.has(rid)) map.set(rid,{fns:[],notes:[]});
+    map.get(rid).fns.push(fn);
+    if(note) map.get(rid).notes.push(note);
+  });
+  let out="";
+  for(const [rid,info] of map){
+    const you = rid===selected;
+    const badges = info.fns.map(f=>`<span class="fn ${f==="HOME"?"home":""}">${FN_LABEL[f]}</span>`).join(" ");
+    const note = info.notes.length?` <span style="color:var(--ink-soft)">— ${[...new Set(info.notes)].join("; ")}</span>`:"";
+    out += `<div class="row">${badges}<span class="nm ${you?"you":""}">${ROLES[rid].label}${you?" (selected)":""}</span>${note}</div>`;
+  }
+  return out;
+}
+function refreshPanelState(){
+  panelBody.querySelectorAll(".decision").forEach(el=>{
+    el.classList.toggle("open", el.dataset.d===activeDecision);
+  });
+  const cf=document.getElementById("clearFilter");
+  if(cf) cf.style.display = activeDecision?"inline":"none";
+}
+
+/* ---- global handlers ---- */
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape" && view==="explore"){ clearAll(); syncURL(); }
+});
+document.body.addEventListener("click",e=>{
+  if(view!=="explore") return;
+  if(!e.target.closest(".role") && !e.target.closest(".panel") && !e.target.closest(".realm-head")){
+    clearAll(); syncURL();
+  }
+});
+document.getElementById("panelClose").addEventListener("click",e=>{
+  e.stopPropagation(); clearAll(); syncURL();
+});
+window.addEventListener("resize", onViewportChange);
+window.addEventListener("popstate", routeFromURL);
+
+/* ---- open on whatever the link asked for ---- */
+routeFromURL();
+
+/* ---- data integrity check (console only) ---- */
+DECISIONS.forEach(d=>d.roles.forEach(([rid])=>{
+  if(!ROLES[rid]) console.warn(`Decision "${d.id}" references unknown role "${rid}"`);
+}));
+</script>
+</body>
+</html>

@@ -1,0 +1,59 @@
+name: Deploy guide to GitHub Pages
+
+# The deliverable is built, not committed: build.js inlines
+# ews-pathways-data.js into ews-decision-map.src.html, and the result is
+# published as index.html. Content edits land in ews-pathways-data.js and
+# deploy from there — nobody hand-edits the built file.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never let two deploys race; let a newer push supersede an in-flight one.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build the single-file guide
+        run: node build.js
+
+      - name: Fail if the build produced nothing
+        run: test -s ews-decision-map.html
+
+      - name: Stage the site
+        run: |
+          mkdir -p _site
+          cp ews-decision-map.html _site/index.html
+          # Working draft, not yet approved: ask crawlers to stay out.
+          # Delete this step when the committee is ready to be found.
+          printf 'User-agent: *\nDisallow: /\n' > _site/robots.txt
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

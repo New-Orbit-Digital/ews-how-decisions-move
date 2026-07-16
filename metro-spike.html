@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spike · A concern in the classroom · EWS</title>
+<style>
+/* ============================================================
+   EWS · Metro spike v0.1 — "A concern in the classroom"
+   ------------------------------------------------------------
+   A KILL-OR-COMMIT SPIKE. Deliberately NOT part of the
+   ews-decision-map.html deliverable and not touched by build.js.
+
+   Tests one question: can a transit-line framework carry a
+   governance pathway without implying rank?
+
+   Station copy is lifted verbatim from the `classroom` situation
+   in ews-pathways-data.js (start.why, steps[].text, REVIEW_LINE).
+   Nothing here is newly written about the school.
+
+   No webfont link on purpose: the spike stands alone, and the
+   main file's Fraunces/Public Sans already declare these exact
+   local fallbacks.
+
+   Changelog
+   v0.1 — 2026-07: first spike. One line, two realm zones, one
+          interchange, tap-for-why captions.
+   ============================================================ */
+:root{
+  --purple:#542D5C;
+  --purple-soft:#EFE7F2;
+  --gold:#FCD23E;
+  --gold-deep:#C9A227;
+  --ink:#2B2430;
+  --ink-soft:#6B6172;
+  --paper:#FBF9F5;
+  --card:#FFFFFF;
+  --line:#E4DDD3;
+
+  --ped-bg:#F5E7E4;  --ped-edge:#C79E97;
+  --adm-bg:#E9EEE5;  --adm-edge:#9FB292;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
+  background:var(--paper);color:var(--ink);
+  font-size:15px;line-height:1.5;
+  padding:26px 16px 48px;
+}
+.wrap{max-width:620px;margin:0 auto}
+
+/* ---------- line header ---------- */
+.spikebadge{
+  display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.09em;
+  text-transform:uppercase;padding:4px 10px;border-radius:999px;
+  border:1.5px solid var(--gold-deep);background:var(--gold);color:#4A3B00;
+  margin-bottom:16px;
+}
+.lineheader{display:flex;align-items:center;gap:11px;margin-bottom:4px}
+.swatch{flex:none;width:28px;height:6px;border-radius:3px;background:var(--purple)}
+h1{
+  font-family:Georgia,'Times New Roman',serif;font-weight:600;
+  font-size:clamp(21px,5.2vw,27px);line-height:1.14;color:var(--purple);
+}
+.sub{font-size:12.5px;color:var(--ink-soft);margin:0 0 18px 39px}
+
+/* ---------- the diagram ---------- */
+.metro{display:block;width:100%;max-width:560px;height:auto;margin:0 auto}
+.metro text{font-family:system-ui,-apple-system,'Segoe UI',sans-serif}
+.zonelabel{font-size:8.5px;font-weight:700;letter-spacing:.14em;fill:var(--ink-soft);text-transform:uppercase}
+.stlabel{font-size:12px;font-weight:700;fill:var(--ink)}
+.stlabel.quiet{font-weight:600;fill:var(--ink-soft);font-size:10.5px}
+.seam{stroke:var(--adm-edge);stroke-width:1;stroke-dasharray:3 4;opacity:.5}
+
+.trunk{fill:none;stroke:var(--purple);stroke-width:5;stroke-linecap:round;stroke-linejoin:round}
+.spur{fill:none;stroke:var(--adm-edge);stroke-width:3;stroke-linecap:round}
+
+.station{cursor:pointer}
+.station .hit{fill:transparent}
+.station .halo{fill:none;stroke:transparent;stroke-width:3}
+.station.on .halo{stroke:var(--gold)}
+.station:focus{outline:none}
+.station:focus-visible .halo{stroke:var(--gold-deep)}
+.dot{fill:#fff;stroke:var(--purple);stroke-width:3}
+.dot.core{fill:var(--purple);stroke:none}
+.dot.adm{stroke:var(--adm-edge);stroke-width:2.5}
+.terminus{fill:var(--purple)}
+
+/* ---------- why caption ---------- */
+.why{
+  background:var(--card);border:1px solid var(--line);border-left:4px solid var(--gold);
+  border-radius:10px;padding:12px 14px;margin:18px auto 0;max-width:560px;min-height:96px;
+}
+.whyhead{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:5px}
+.whystation{font-size:14.5px;font-weight:700;color:var(--purple)}
+.whyhint{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-soft);white-space:nowrap}
+.whytext{font-size:13.5px;color:var(--ink)}
+
+footer{
+  max-width:560px;margin:22px auto 0;padding-top:14px;border-top:1px solid var(--line);
+  font-size:11.5px;color:var(--ink-soft);
+}
+footer p{margin-bottom:6px}
+footer b{color:var(--ink)}
+
+@media (hover:hover) and (pointer:fine){
+  .station:hover .halo{stroke:var(--gold-deep)}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <span class="spikebadge">Spike v0.1 — kill or commit</span>
+
+  <div class="lineheader">
+    <span class="swatch" aria-hidden="true"></span>
+    <h1>A concern in the classroom</h1>
+  </div>
+  <p class="sub">One pathway, drawn as a line through the realms it crosses.</p>
+
+  <!-- viewBox is tuned so that at 390px the diagram renders 1:1 —
+       station labels stay ~10.5px there and scale to ~16px on desktop. -->
+  <svg class="metro" viewBox="0 0 362 200" role="img"
+       aria-label="A concern in the classroom: Class Teacher, then Section Co-Chair, then Pedagogical Chair — an interchange where the Admin Chair's line joins — then Review. The line begins in the Pedagogical zone and crosses into the Administrative zone at the interchange.">
+    <defs>
+      <linearGradient id="fadePed" x1="0" y1="0" x2="1" y2="0">
+        <stop offset=".86" stop-color="#F5E7E4" stop-opacity="1"/>
+        <stop offset="1"   stop-color="#F5E7E4" stop-opacity="0"/>
+      </linearGradient>
+      <linearGradient id="fadeAdm" x1="0" y1="0" x2="1" y2="0">
+        <stop offset=".86" stop-color="#E9EEE5" stop-opacity="1"/>
+        <stop offset="1"   stop-color="#E9EEE5" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+
+    <!-- realm zones. They stop short of the right edge and fade out:
+         the review is provided by the framework, not held in a realm. -->
+    <rect x="0" y="20" width="300" height="78" fill="url(#fadePed)"/>
+    <rect x="0" y="98" width="300" height="72" fill="url(#fadeAdm)"/>
+    <line class="seam" x1="0" y1="98" x2="286" y2="98"/>
+    <text class="zonelabel" x="10" y="34">Pedagogical</text>
+    <text class="zonelabel" x="10" y="114">Administrative</text>
+
+    <!-- the Administrative line, touching the trunk at the interchange -->
+    <path class="spur" d="M 210 72 C 196 94 182 102 166 126"/>
+
+    <!-- the trunk: through the Pedagogical zone, then across the seam -->
+    <path class="trunk" d="M 44 72 H 210 C 232 72 236 110 258 110 H 334"/>
+
+    <!-- Admin Chair — not a station on this line, a line that meets it -->
+    <circle class="dot adm" cx="166" cy="126" r="4.5"/>
+    <text class="stlabel quiet" x="166" y="144" text-anchor="middle">Admin</text>
+    <text class="stlabel quiet" x="166" y="154" text-anchor="middle">Chair</text>
+
+    <!-- stations -->
+    <g class="station on" data-k="teacher" role="button" tabindex="0" aria-label="Class Teacher">
+      <circle class="hit" cx="44" cy="72" r="22"/>
+      <text class="stlabel" x="44" y="44" text-anchor="middle">Class</text>
+      <text class="stlabel" x="44" y="56" text-anchor="middle">Teacher</text>
+      <circle class="halo" cx="44" cy="72" r="11"/>
+      <circle class="dot" cx="44" cy="72" r="6"/>
+    </g>
+
+    <g class="station" data-k="cochair" role="button" tabindex="0" aria-label="Section Co-Chair">
+      <circle class="hit" cx="130" cy="72" r="22"/>
+      <text class="stlabel" x="130" y="44" text-anchor="middle">Section</text>
+      <text class="stlabel" x="130" y="56" text-anchor="middle">Co-Chair</text>
+      <circle class="halo" cx="130" cy="72" r="11"/>
+      <circle class="dot" cx="130" cy="72" r="6"/>
+    </g>
+
+    <!-- the interchange: double ring, where the Admin Chair's line joins -->
+    <g class="station" data-k="pedchair" role="button" tabindex="0" aria-label="Pedagogical Chair, interchange">
+      <circle class="hit" cx="210" cy="72" r="22"/>
+      <text class="stlabel" x="210" y="44" text-anchor="middle">Pedagogical</text>
+      <text class="stlabel" x="210" y="56" text-anchor="middle">Chair</text>
+      <circle class="halo" cx="210" cy="72" r="14"/>
+      <circle class="dot" cx="210" cy="72" r="9"/>
+      <circle class="dot core" cx="210" cy="72" r="4"/>
+    </g>
+
+    <!-- the terminus is a bar, not a dot: Review is a provision, not a role -->
+    <g class="station" data-k="review" role="button" tabindex="0" aria-label="Review">
+      <circle class="hit" cx="334" cy="110" r="22"/>
+      <circle class="halo" cx="334" cy="110" r="13"/>
+      <rect class="terminus" x="331" y="102" width="6" height="16" rx="3"/>
+      <text class="stlabel" x="334" y="132" text-anchor="middle">Review</text>
+    </g>
+  </svg>
+
+  <div class="why">
+    <div class="whyhead">
+      <span class="whystation" id="whyStation"></span>
+      <span class="whyhint">Tap a station</span>
+    </div>
+    <p class="whytext" id="whyText"></p>
+  </div>
+
+  <footer>
+    <p><b>This is a spike, not part of the guide.</b> It tests one framework on one pathway. Station copy is taken verbatim from the classroom pathway; nothing here is newly written about the school.</p>
+    <p>From: Decision Matrix draft · Classroom behavior / Parent grievances</p>
+  </footer>
+</div>
+
+<script>
+/* Verbatim from the `classroom` situation in ews-pathways-data.js:
+   start.why, steps[0].text, steps[1].text is not on this line, and
+   REVIEW_LINE. The spike duplicates rather than imports — it is
+   deliberately standalone and must never drift into the deliverable. */
+const STATIONS = {
+  teacher:{
+    name:"Class Teacher",
+    why:"Day-to-day classroom life is held by the class teacher — this is where classroom concerns are raised first."},
+  cochair:{
+    name:"Section Co-Chair",
+    why:"If a concern continues, the section co-chair joins the conversation."},
+  pedchair:{
+    name:"Pedagogical Chair",
+    why:"Unresolved concerns are held by the Pedagogical Chair, with the Admin Chair alongside — so everyone is hearing the same conversation, not separate ones."},
+  review:{
+    name:"Review",
+    why:"If resolution can't be reached, the working framework provides for a review of the steps taken — a check that the agreed process was followed."}
+};
+
+const whyStation = document.getElementById("whyStation");
+const whyText = document.getElementById("whyText");
+const stations = [...document.querySelectorAll(".station")];
+
+function select(k){
+  const s = STATIONS[k];
+  if(!s) return;
+  stations.forEach(g=>g.classList.toggle("on", g.dataset.k === k));
+  whyStation.textContent = s.name;
+  whyText.textContent = s.why;
+}
+stations.forEach(g=>{
+  g.addEventListener("click",()=>select(g.dataset.k));
+  g.addEventListener("keydown",e=>{
+    if(e.key === "Enter" || e.key === " "){ e.preventDefault(); select(g.dataset.k); }
+  });
+});
+select("teacher");   // the line starts here, so the caption does too
+</script>
+</body>
+</html>
