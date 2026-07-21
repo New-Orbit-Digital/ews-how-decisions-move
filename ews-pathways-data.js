@@ -403,8 +403,8 @@ const REVIEW_LINE =
      the form explains itself and offers the message to copy.
    ------------------------------------------------------------ */
 const CONFIG = {
-  feedbackEndpoint: null,  // e.g. "https://script.google.com/macros/s/AKfy.../exec"
-  feedbackEmail: null,     // e.g. "governance@..." — fallback when the endpoint is unset or fails
+  feedbackEndpoint: "https://script.google.com/macros/s/AKfycbxVSuH9tDE06GJGhmRzdNijLSjYEEm1ItraIdlOJSIQNbMWMAliTzKPjjsiL-3D5EHKeQ/exec",
+  feedbackEmail: "kmentz@emersonwaldorf.org",   // fallback when the endpoint fails
   feedbackSubject: "How Decisions Move — feedback",
 };
 

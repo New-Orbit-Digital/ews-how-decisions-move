@@ -15,7 +15,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 /* ============================================================
-   EWS · How Decisions Move — Interactive draft v0.2.7
+   EWS · How Decisions Move — Interactive draft v0.2.8
    Companion to: Interim Governance Structure v0.2 (July 2026)
    Decision data: EWS Governance Resolution Framework (working draft)
    ------------------------------------------------------------
@@ -88,6 +88,10 @@
             corrected in the data file: safety no longer repeats the
             "Also a right first call" eyebrow above it, and bullying
             points at the counselor door directly.
+   v0.2.8 — feedback goes live: CONFIG.feedbackEndpoint points at the
+            deployed Apps Script web app, and CONFIG.feedbackEmail is set
+            so the fallback path has somewhere to go when a POST fails.
+            No code change — configuration only.
    ============================================================ */
 :root{
   --purple:#542D5C;          /* EWS brand */
@@ -775,7 +779,7 @@ footer .ptcnote{color:var(--purple);font-weight:600}
   <h1>How Decisions Move</h1>
   <p class="subtitle">An interactive companion to the Interim Governance Structure.</p>
   <div class="draftbar">
-    <span class="badge">Working draft v0.2.7</span>
+    <span class="badge">Working draft v0.2.8</span>
     <span class="badge quiet">Built on Structure v0.2 + Decision Matrix draft</span>
     <span class="badge quiet">For committee review — not yet approved</span>
   </div>
@@ -1271,8 +1275,8 @@ const REVIEW_LINE =
      the form explains itself and offers the message to copy.
    ------------------------------------------------------------ */
 const CONFIG = {
-  feedbackEndpoint: null,  // e.g. "https://script.google.com/macros/s/AKfy.../exec"
-  feedbackEmail: null,     // e.g. "governance@..." — fallback when the endpoint is unset or fails
+  feedbackEndpoint: "https://script.google.com/macros/s/AKfycbxVSuH9tDE06GJGhmRzdNijLSjYEEm1ItraIdlOJSIQNbMWMAliTzKPjjsiL-3D5EHKeQ/exec",
+  feedbackEmail: "kmentz@emersonwaldorf.org",   // fallback when the endpoint fails
   feedbackSubject: "How Decisions Move — feedback",
 };
 
@@ -2380,7 +2384,7 @@ routeFromURL();
    without throwing is taken as sent. Anything else falls back to email,
    so there is always an exit.
    ============================================================ */
-const VERSION = "v0.2.7";
+const VERSION = "v0.2.8";
 const LIMITS = {name:100, feedback:1000, context:300};
 
 const fab = document.getElementById("fab");
