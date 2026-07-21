@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 /* ============================================================
-   EWS · How Decisions Move — Interactive draft v0.2.6
+   EWS · How Decisions Move — Interactive draft v0.2.7
    Companion to: Interim Governance Structure v0.2 (July 2026)
    Decision data: EWS Governance Resolution Framework (working draft)
    ------------------------------------------------------------
@@ -71,6 +71,17 @@
             mailto and a copy button, so submission always has an exit.
             The search empty state now opens this same form, carrying the
             query that missed. No other network calls, no storage.
+   v0.2.7 — feedback shell corrections. Note placeholder now asks for the
+            specific gap rather than inviting anything. Name is required:
+            label drops "(optional)", it validates first, and focus opens
+            there instead of the note so a keyboard user isn't sent back
+            up. Honeypot input carries autocomplete="off", tabindex="-1"
+            and its own aria-hidden, so autofill and assistive tech both
+            leave it alone — a filled honeypot silently discards, and a
+            real person must never trip it. Also two alternate why-lines
+            corrected in the data file: safety no longer repeats the
+            "Also a right first call" eyebrow above it, and bullying
+            points at the counselor door directly.
    ============================================================ */
 :root{
   --purple:#542D5C;          /* EWS brand */
@@ -758,7 +769,7 @@ footer .ptcnote{color:var(--purple);font-weight:600}
   <h1>How Decisions Move</h1>
   <p class="subtitle">An interactive companion to the Interim Governance Structure.</p>
   <div class="draftbar">
-    <span class="badge">Working draft v0.2.6</span>
+    <span class="badge">Working draft v0.2.7</span>
     <span class="badge quiet">Built on Structure v0.2 + Decision Matrix draft</span>
     <span class="badge quiet">For committee review — not yet approved</span>
   </div>
@@ -1748,7 +1759,7 @@ routeFromURL();
    without throwing is taken as sent. Anything else falls back to email,
    so there is always an exit.
    ============================================================ */
-const VERSION = "v0.2.6";
+const VERSION = "v0.2.7";
 const LIMITS = {name:100, feedback:1000, context:300};
 
 const fab = document.getElementById("fab");
@@ -1781,19 +1792,22 @@ function fbFormHTML(){
     <p class="fbintro">This is a working draft. If something here is wrong, missing, or unclear, say so — it goes to the group revising it.</p>
     <form id="fbForm" novalidate>
       <div class="fbfield">
-        <label class="fblabel" for="fbName">Your name <span class="opt">(optional)</span></label>
-        <input class="fbinput" id="fbName" name="name" type="text" autocomplete="name" maxlength="${LIMITS.name}">
+        <label class="fblabel" for="fbName">Your name</label>
+        <input class="fbinput" id="fbName" name="name" type="text" required
+          autocomplete="name" maxlength="${LIMITS.name}" aria-describedby="fbNameError">
+        <p class="fberror" id="fbNameError" hidden></p>
       </div>
       <div class="fbfield">
         <label class="fblabel" for="fbText">What would you change?</label>
         <textarea class="fbtextarea" id="fbText" name="feedback" required
-          aria-describedby="fbCount" placeholder="Anything that's wrong, missing, or unclear."></textarea>
+          aria-describedby="fbCount" placeholder="Describe exactly the gap or issue you’re seeing — roles, ambiguities, situations. Be specific."></textarea>
         <div class="fbcount" id="fbCount">0 / ${LIMITS.feedback}</div>
         <p class="fberror" id="fbError" hidden></p>
       </div>
       <div class="fbpot" aria-hidden="true">
-        <label for="fbWebsite">Leave this field empty</label>
-        <input id="fbWebsite" name="website" type="text" tabindex="-1" autocomplete="off">
+        <label for="fbWebsite" aria-hidden="true">Leave this field empty</label>
+        <input id="fbWebsite" name="website" type="text"
+          tabindex="-1" autocomplete="off" aria-hidden="true">
       </div>
       <div class="fbactions">
         <button class="fbsend" id="fbSend" type="submit">Send</button>
@@ -1845,7 +1859,9 @@ function fbRender(html){
       count.classList.toggle("over", n > LIMITS.feedback);
     });
     form.addEventListener("submit", onFeedbackSubmit);
-    text.focus();
+    /* first required field, not the note — name is required as of v0.2.7,
+       so landing below it would send keyboard users backwards. */
+    document.getElementById("fbName").focus();
   }
   const copy = document.getElementById("fbCopy");
   if(copy) copy.addEventListener("click", e=>{
@@ -1883,6 +1899,7 @@ async function onFeedbackSubmit(e){
   const textEl = document.getElementById("fbText");
   const potEl  = document.getElementById("fbWebsite");
   const errEl  = document.getElementById("fbError");
+  const nameErrEl = document.getElementById("fbNameError");
   const sendEl = document.getElementById("fbSend");
 
   const name = nameEl.value.trim().slice(0, LIMITS.name);
@@ -1892,6 +1909,16 @@ async function onFeedbackSubmit(e){
   /* honeypot: a real reader never sees this field, so anything in it is a
      bot. Close as though it worked; send nothing. */
   if(potEl.value.trim() !== ""){ fbRender(fbThanksHTML()); return; }
+
+  if(!name){
+    nameErrEl.textContent = "Add your name before sending.";
+    nameErrEl.hidden = false;
+    nameEl.setAttribute("aria-invalid","true");
+    nameEl.focus();
+    return;
+  }
+  nameErrEl.hidden = true;
+  nameEl.removeAttribute("aria-invalid");
 
   if(!feedback){
     errEl.textContent = "Add a note before sending.";

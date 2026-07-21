@@ -450,7 +450,7 @@ const SITUATIONS = [
           why:"The adult closest to your child each day. Share what you're seeing — teachers bring support in right away." },
   alt:{ roles:["n8Counselor","hsCounselor"],
         label:"The school counselor",
-        why:"Also a right first call — N–8 or High School, depending on your child." },
+        why:"N–8 or High School, depending on your child." },
   steps:[
     { roles:["pedChair"],
       label:"Pedagogical Chair",
@@ -472,7 +472,7 @@ const SITUATIONS = [
           why:"Name what's happening to the class teacher first — patterns in the classroom are theirs to see and act on." },
   alt:{ roles:["n8Counselor","hsCounselor"],
         label:"The school counselor",
-        why:"If your child needs support right away, the counselor is an equally right door." },
+        why:"If your child needs support right away, start here." },
   steps:[
     { roles:["pedChair"],
       label:"Pedagogical Chair",
