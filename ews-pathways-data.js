@@ -392,9 +392,20 @@ const GROUP_ORDER = {
 const REVIEW_LINE =
   "If resolution can't be reached, the working framework provides for a review of the steps taken — a check that the agreed process was followed.";
 
-/* Optional site config (leave feedbackEmail unset for now). */
+/* ------------------------------------------------------------
+   Site config.
+
+   feedbackEndpoint — the Apps Script web-app URL that writes to the
+     feedback Sheet. Paste it here after deploying; see SETUP.md.
+     While it is null the form still works and falls back to email.
+   feedbackEmail / feedbackSubject — the fallback path. Used when
+     there is no endpoint, or when the POST fails. If BOTH are null
+     the form explains itself and offers the message to copy.
+   ------------------------------------------------------------ */
 const CONFIG = {
-  feedbackEmail: null,   // e.g. "governance@..." — enables mailto on empty search
+  feedbackEndpoint: null,  // e.g. "https://script.google.com/macros/s/AKfy.../exec"
+  feedbackEmail: null,     // e.g. "governance@..." — fallback when the endpoint is unset or fails
+  feedbackSubject: "How Decisions Move — feedback",
 };
 
 /* ------------------------------------------------------------
