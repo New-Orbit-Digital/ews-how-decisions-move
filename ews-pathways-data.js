@@ -395,17 +395,13 @@ const REVIEW_LINE =
 /* ------------------------------------------------------------
    Site config.
 
-   feedbackEndpoint — the Apps Script web-app URL that writes to the
-     feedback Sheet. Paste it here after deploying; see SETUP.md.
-     While it is null the form still works and falls back to email.
-   feedbackEmail / feedbackSubject — the fallback path. Used when
-     there is no endpoint, or when the POST fails. If BOTH are null
-     the form explains itself and offers the message to copy.
+   feedbackFormUrl — the Google Form that collects committee feedback.
+     Both feedback entrances (the fixed button and the search empty
+     state) link straight out to it in a new tab. The page itself
+     collects nothing and sends nothing.
    ------------------------------------------------------------ */
 const CONFIG = {
-  feedbackEndpoint: "https://script.google.com/macros/s/AKfycbxVSuH9tDE06GJGhmRzdNijLSjYEEm1ItraIdlOJSIQNbMWMAliTzKPjjsiL-3D5EHKeQ/exec",
-  feedbackEmail: "kmentz@emersonwaldorf.org",   // fallback when the endpoint fails
-  feedbackSubject: "How Decisions Move — feedback",
+  feedbackFormUrl: "https://forms.gle/EngDvPbzv5hPMBke6",
 };
 
 /* ------------------------------------------------------------

@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 /* ============================================================
-   EWS · How Decisions Move — Interactive draft v0.2.8
+   EWS · How Decisions Move — Interactive draft v0.2.9
    Companion to: Interim Governance Structure v0.2 (July 2026)
    Decision data: EWS Governance Resolution Framework (working draft)
    ------------------------------------------------------------
@@ -86,6 +86,16 @@
             deployed Apps Script web app, and CONFIG.feedbackEmail is set
             so the fallback path has somewhere to go when a POST fails.
             No code change — configuration only.
+   v0.2.9 — feedback moves to an external Google Form. Both entrances
+            are now plain links to CONFIG.feedbackFormUrl, opening in a
+            new tab. The whole in-page form is gone — dialog, scrim,
+            focus trap, submission, fallbacks — along with the config it
+            needed and the Apps Script files. The page now makes no
+            requests of its own and stores nothing. Earlier entries
+            below still name what they shipped; git history is the
+            archive for the code itself.
+            (Numbered v0.2.9, not v0.2.8: that number already shipped
+            as the Sheet-wiring build.)
    ============================================================ */
 :root{
   --purple:#542D5C;          /* EWS brand */
@@ -219,10 +229,8 @@ h1{
   font-size:14px;color:var(--ink-soft);
   background:var(--card);border:1px dashed var(--line);border-radius:10px;padding:14px 15px;
 }
-.emptystate a{
-  display:inline-block;min-height:44px;padding:11px 0;
-  color:var(--purple);font-weight:700;
-}
+/* (P3's `.emptystate a` rule styled the old mailto anchor. That anchor is
+   gone, and the rule outranked .telllink — so it went with it.) */
 
 .cards{display:grid;grid-template-columns:1fr;gap:10px}
 @media (min-width:720px){ .cards{grid-template-columns:1fr 1fr;gap:12px} }
@@ -613,13 +621,15 @@ footer b{color:var(--ink)}
 footer .ptcnote{color:var(--purple);font-weight:600}
 
 /* ============================================================
-   FEEDBACK — one door, reachable from anywhere.
+   FEEDBACK — one door, reachable from anywhere. Both entrances
+   are plain links out to the Google Form; nothing is collected
+   in the page itself.
    ============================================================ */
 .fab{
   position:fixed;right:16px;bottom:16px;z-index:60;
   display:flex;align-items:center;gap:8px;min-height:48px;padding:0 18px;
   border-radius:999px;background:var(--purple);color:#fff;
-  border:2px solid var(--purple);
+  border:2px solid var(--purple);text-decoration:none;
   font-size:13.5px;font-weight:700;
   box-shadow:0 3px 16px rgba(43,36,48,.28);
   transition:transform .18s ease, box-shadow .18s ease;
@@ -629,67 +639,20 @@ footer .ptcnote{color:var(--purple);font-weight:600}
 /* the map's bottom sheet owns the lower edge at ≤1020px */
 @media (max-width:1020px){ .fab{bottom:12px;right:12px} }
 
-.fbscrim{
-  position:fixed;inset:0;z-index:70;background:rgba(43,36,48,.45);
-  display:flex;align-items:center;justify-content:center;padding:20px;
-}
-.fbdialog{
-  background:var(--card);border:1px solid var(--line);border-top:5px solid var(--gold);
-  border-radius:14px;width:100%;max-width:460px;max-height:88vh;overflow:auto;
-  padding:18px 18px 20px;box-shadow:0 12px 44px rgba(43,36,48,.3);
-}
-.fbhead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
-.fbdialog h2{
-  font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:21px;color:var(--purple);
-  line-height:1.16;margin-bottom:4px;
-}
-.fbclose{
-  flex:none;width:44px;height:44px;margin:-10px -10px 0 0;
-  display:grid;place-items:center;font-size:22px;color:var(--ink-soft);border-radius:8px;
-}
-.fbclose:focus-visible{outline:3px solid var(--gold);outline-offset:-2px}
-.fbintro{font-size:13.5px;color:var(--ink-soft);margin-bottom:14px}
-.fbfield{margin-bottom:12px}
-.fblabel{display:block;font-size:12.5px;font-weight:700;color:var(--ink);margin-bottom:5px}
-.fblabel .opt{font-weight:600;color:var(--ink-soft)}
-.fbinput,.fbtextarea{
-  width:100%;background:var(--paper);border:1.5px solid var(--line);border-radius:9px;
-  padding:11px 12px;font:inherit;font-size:16px;color:var(--ink);   /* 16px: no iOS zoom */
-  min-height:48px;
-}
-.fbtextarea{min-height:124px;resize:vertical;line-height:1.45}
-.fbinput:focus,.fbtextarea:focus{outline:none;border-color:var(--purple);box-shadow:0 0 0 3px rgba(84,45,92,.13)}
-.fbinput[aria-invalid="true"],.fbtextarea[aria-invalid="true"]{border-color:#A33}
-.fbcount{font-size:11.5px;color:var(--ink-soft);text-align:right;margin-top:4px}
-.fbcount.over{color:#A33;font-weight:700}
-.fberror{font-size:12.5px;color:#A33;font-weight:600;margin-top:5px}
-/* honeypot: off-screen, never announced, never tabbable */
-.fbpot{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
-.fbactions{display:flex;gap:10px;align-items:center;margin-top:16px}
-.fbsend{
-  min-height:48px;padding:0 20px;border-radius:9px;
-  background:var(--purple);color:#fff;border:2px solid var(--purple);
-  font-size:14px;font-weight:700;
-}
-.fbsend[disabled]{opacity:.55;cursor:default}
-.fbsend:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
-.fbcancel{min-height:48px;padding:0 12px;font-size:13.5px;font-weight:700;color:var(--ink-soft)}
-.fbcancel:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
-.fbnote{
-  font-size:13px;color:var(--ink);background:var(--paper);
-  border-left:3px solid var(--gold);border-radius:6px;padding:10px 12px;margin-top:14px;
-}
-.fbnote a{color:var(--purple);font-weight:700}
-.fbcopy{
-  display:block;width:100%;min-height:48px;margin-top:10px;
-  border:1.5px solid var(--purple);border-radius:9px;color:var(--purple);
+/* the search empty state's way out to the same form */
+.telllink{
+  display:flex;align-items:center;justify-content:center;
+  width:100%;min-height:48px;margin-top:10px;
+  border:1.5px solid var(--purple);border-radius:9px;
+  color:var(--purple);text-decoration:none;
   font-size:13.5px;font-weight:700;
 }
-.fbcopy:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
-.fbdone{font-size:15px;color:var(--ink)}
-.fbdone .tick{
-  display:grid;place-items:center;width:40px;height:40px;border-radius:999px;
-  background:var(--gold);color:#4A3B00;font-size:20px;font-weight:700;margin-bottom:10px;
+.telllink:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+
+/* announced to screen readers, invisible on screen */
+.vh{
+  position:absolute;width:1px;height:1px;margin:-1px;padding:0;
+  overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;
 }
 
 /* ============================================================
@@ -710,8 +673,7 @@ footer .ptcnote{color:var(--purple);font-weight:600}
   .tracebtn:hover{background:var(--purple-soft)}
   .role:hover{border-color:var(--purple);box-shadow:0 1px 6px rgba(84,45,92,.18)}
   .fab:hover{box-shadow:0 5px 20px rgba(43,36,48,.36)}
-  .fbcopy:hover{background:var(--purple-soft)}
-  .fbcancel:hover{color:var(--purple)}
+  .telllink:hover{background:var(--purple-soft)}
   .decision>button:hover{background:var(--paper)}
   .realm-head:not(:disabled):hover .realm-name{color:var(--purple)}
 }
@@ -773,7 +735,7 @@ footer .ptcnote{color:var(--purple);font-weight:600}
   <h1>How Decisions Move</h1>
   <p class="subtitle">An interactive companion to the Interim Governance Structure.</p>
   <div class="draftbar">
-    <span class="badge">Working draft v0.2.8</span>
+    <span class="badge">Working draft v0.2.9</span>
     <span class="badge quiet">Built on Structure v0.2 + Decision Matrix draft</span>
     <span class="badge quiet">For committee review — not yet approved</span>
   </div>
@@ -842,15 +804,9 @@ footer .ptcnote{color:var(--purple);font-weight:600}
   </div>
 </section>
 
-<button class="fab" id="fab" type="button" aria-haspopup="dialog">
-  <span aria-hidden="true">✎</span> Give feedback
-</button>
-
-<div class="fbscrim" id="fbScrim" hidden>
-  <div class="fbdialog" id="fbDialog" role="dialog" aria-modal="true" aria-labelledby="fbTitle">
-    <div id="fbBody"></div>
-  </div>
-</div>
+<a class="fab" id="fab" href="#" target="_blank" rel="noopener">
+  <span aria-hidden="true">✎</span> Give feedback<span class="vh"> (opens in new tab)</span>
+</a>
 
 <footer>
   <p class="frame"><b>Read this as spheres of coverage, not a reporting chart.</b> Placement, ordering, and grouping imply no rank. Authority, responsibility, and accountability are deliberately not fixed here — that work belongs to the decision-making matrix and the policies &amp; procedures groups, and the pathways shown are drawn from their working drafts.</p>
@@ -1059,11 +1015,11 @@ function resultRow(e){
 }
 function emptyState(){
   const line = "Didn’t find it? That’s useful for the committee to know.";
-  /* One feedback door everywhere: this opens the same form the FAB does,
-     carrying the query that found nothing so misses arrive labelled. */
+  /* One feedback door everywhere: the same form the FAB opens. */
   return `<div class="emptystate">
     <p>${line}</p>
-    <button class="fbcopy" id="emptyTell" type="button">Tell the committee</button>
+    <a class="telllink" href="${esc(CONFIG.feedbackFormUrl)}" target="_blank" rel="noopener"
+      >Tell the committee<span class="vh"> (opens in new tab)</span></a>
   </div>`;
 }
 function renderSearch(){
@@ -1085,11 +1041,6 @@ function renderSearch(){
       if(b.dataset.type === "situation") openSituation(b.dataset.id);
       else openRole(b.dataset.id);
     });
-  });
-  const tell = document.getElementById("emptyTell");
-  if(tell) tell.addEventListener("click",ev=>{
-    ev.stopPropagation();
-    openFeedback(`search: "${raw}"`);
   });
 }
 /* A role result lands on that role, selected, in the map. */
@@ -1751,232 +1702,12 @@ window.addEventListener("popstate", routeFromURL);
 routeFromURL();
 
 /* ============================================================
-   FEEDBACK — one door, from the FAB or the search empty state.
-
-   Submission is a CORS "simple request" on purpose: URLSearchParams
-   gives application/x-www-form-urlencoded, which browsers send without
-   a preflight. Apps Script does not answer OPTIONS, so a JSON
-   content-type would fail before it ever left the browser.
-
-   The response is treated as best-effort — Apps Script redirects to a
-   different origin and the body may be unreadable. Reaching the server
-   without throwing is taken as sent. Anything else falls back to email,
-   so there is always an exit.
+   FEEDBACK — both entrances are plain links out to the Google Form
+   in CONFIG.feedbackFormUrl. Nothing is collected in this page: no
+   request, no storage. The empty-state link is written at render
+   time; the fixed one is wired here.
    ============================================================ */
-const VERSION = "v0.2.8";
-const LIMITS = {name:100, feedback:1000, context:300};
-
-const fab = document.getElementById("fab");
-const fbScrim = document.getElementById("fbScrim");
-const fbDialog = document.getElementById("fbDialog");
-const fbBody = document.getElementById("fbBody");
-
-let fbReturnFocus = null;   // what to re-focus when the dialog closes
-let fbContextExtra = null;  // e.g. a search query that found nothing
-
-/* Where the reader was, so a comment arrives with its subject attached. */
-function feedbackContext(){
-  const bits = [];
-  if(fbContextExtra) bits.push(fbContextExtra);
-  else if(view === "signpost" && situationId) bits.push(`situation: ${situationId}`);
-  else if(view === "pathway" && pathwayId) bits.push(`pathway: ${pathwayId}`);
-  else if(view === "explore" && traceSituation) bits.push(`trace: ${traceSituation}`);
-  else if(view === "explore" && selected) bits.push(`role: ${selected}`);
-  else bits.push(`view: ${view}`);
-  bits.push(VERSION);
-  if(DRAFT) bits.push("draft-mode");
-  return bits.join(" · ").slice(0, LIMITS.context);
-}
-
-function fbFormHTML(){
-  return `<div class="fbhead">
-      <h2 id="fbTitle">Tell the committee</h2>
-      <button class="fbclose" id="fbClose" type="button" aria-label="Close feedback">×</button>
-    </div>
-    <p class="fbintro">This is a working draft. If something here is wrong, missing, or unclear, say so — it goes to the group revising it.</p>
-    <form id="fbForm" novalidate>
-      <div class="fbfield">
-        <label class="fblabel" for="fbName">Your name</label>
-        <input class="fbinput" id="fbName" name="name" type="text" required
-          autocomplete="name" maxlength="${LIMITS.name}" aria-describedby="fbNameError">
-        <p class="fberror" id="fbNameError" hidden></p>
-      </div>
-      <div class="fbfield">
-        <label class="fblabel" for="fbText">What would you change?</label>
-        <textarea class="fbtextarea" id="fbText" name="feedback" required
-          aria-describedby="fbCount" placeholder="Describe exactly the gap or issue you’re seeing — roles, ambiguities, situations. Be specific."></textarea>
-        <div class="fbcount" id="fbCount">0 / ${LIMITS.feedback}</div>
-        <p class="fberror" id="fbError" hidden></p>
-      </div>
-      <div class="fbpot" aria-hidden="true">
-        <label for="fbWebsite" aria-hidden="true">Leave this field empty</label>
-        <input id="fbWebsite" name="website" type="text"
-          tabindex="-1" autocomplete="off" aria-hidden="true">
-      </div>
-      <div class="fbactions">
-        <button class="fbsend" id="fbSend" type="submit">Send</button>
-        <button class="fbcancel" id="fbCancel" type="button">Cancel</button>
-      </div>
-    </form>`;
-}
-
-function fbThanksHTML(){
-  return `<div class="fbhead">
-      <h2 id="fbTitle">Thank you — the committee will see this.</h2>
-      <button class="fbclose" id="fbClose" type="button" aria-label="Close feedback">×</button>
-    </div>
-    <div class="fbdone"><span class="tick" aria-hidden="true">✓</span></div>`;
-}
-
-/* No endpoint, or the POST failed: hand the reader their own message. */
-function fbFallbackHTML(name, feedback, context, failed){
-  const msg = `${feedback}\n\n— ${name || "(no name given)"}\n[${context}]`;
-  const mail = CONFIG.feedbackEmail
-    ? `<a href="mailto:${esc(CONFIG.feedbackEmail)}?subject=${encodeURIComponent(CONFIG.feedbackSubject || "")}&body=${encodeURIComponent(msg)}">email it to the committee</a>`
-    : null;
-  return `<div class="fbhead">
-      <h2 id="fbTitle">${failed ? "That didn’t send" : "Not connected yet"}</h2>
-      <button class="fbclose" id="fbClose" type="button" aria-label="Close feedback">×</button>
-    </div>
-    <p class="fbintro">${failed
-      ? "Your note didn’t reach the committee. Nothing is lost — it’s below."
-      : "This draft can’t collect feedback yet. Your note is below."}</p>
-    <div class="fbnote" id="fbMsg">${esc(msg).replace(/\n/g,"<br>")}</div>
-    ${mail ? `<p class="fbintro" style="margin-top:12px">You can ${mail}.</p>` : ""}
-    <button class="fbcopy" id="fbCopy" type="button">Copy this message</button>`;
-}
-
-function fbRender(html){
-  fbBody.innerHTML = html;
-  const close = document.getElementById("fbClose");
-  if(close) close.addEventListener("click", e=>{e.stopPropagation(); closeFeedback();});
-  const cancel = document.getElementById("fbCancel");
-  if(cancel) cancel.addEventListener("click", e=>{e.stopPropagation(); closeFeedback();});
-
-  const form = document.getElementById("fbForm");
-  if(form){
-    const text = document.getElementById("fbText");
-    const count = document.getElementById("fbCount");
-    text.addEventListener("input", ()=>{
-      const n = text.value.length;
-      count.textContent = `${n} / ${LIMITS.feedback}`;
-      count.classList.toggle("over", n > LIMITS.feedback);
-    });
-    form.addEventListener("submit", onFeedbackSubmit);
-    /* first required field, not the note — name is required as of v0.2.7,
-       so landing below it would send keyboard users backwards. */
-    document.getElementById("fbName").focus();
-  }
-  const copy = document.getElementById("fbCopy");
-  if(copy) copy.addEventListener("click", e=>{
-    e.stopPropagation();
-    const msg = document.getElementById("fbMsg").innerText;
-    navigator.clipboard?.writeText(msg).then(
-      ()=>{ copy.textContent = "Copied"; },
-      ()=>{ copy.textContent = "Select the message above to copy it"; }
-    );
-  });
-  if(!form){
-    const c = document.getElementById("fbClose");
-    if(c) c.focus();
-  }
-}
-
-function openFeedback(contextExtra){
-  fbContextExtra = contextExtra || null;
-  fbReturnFocus = document.activeElement;
-  fbScrim.hidden = false;
-  fbRender(fbFormHTML());
-}
-function closeFeedback(){
-  fbScrim.hidden = true;
-  fbBody.innerHTML = "";
-  fbContextExtra = null;
-  if(fbReturnFocus && fbReturnFocus.isConnected) fbReturnFocus.focus();
-  fbReturnFocus = null;
-}
-
-async function onFeedbackSubmit(e){
-  e.preventDefault();
-  e.stopPropagation();
-  const nameEl = document.getElementById("fbName");
-  const textEl = document.getElementById("fbText");
-  const potEl  = document.getElementById("fbWebsite");
-  const errEl  = document.getElementById("fbError");
-  const nameErrEl = document.getElementById("fbNameError");
-  const sendEl = document.getElementById("fbSend");
-
-  const name = nameEl.value.trim().slice(0, LIMITS.name);
-  const feedback = textEl.value.trim();
-  const context = feedbackContext();
-
-  /* honeypot: a real reader never sees this field, so anything in it is a
-     bot. Close as though it worked; send nothing. */
-  if(potEl.value.trim() !== ""){ fbRender(fbThanksHTML()); return; }
-
-  if(!name){
-    nameErrEl.textContent = "Add your name before sending.";
-    nameErrEl.hidden = false;
-    nameEl.setAttribute("aria-invalid","true");
-    nameEl.focus();
-    return;
-  }
-  nameErrEl.hidden = true;
-  nameEl.removeAttribute("aria-invalid");
-
-  if(!feedback){
-    errEl.textContent = "Add a note before sending.";
-    errEl.hidden = false;
-    textEl.setAttribute("aria-invalid","true");
-    textEl.focus();
-    return;
-  }
-  if(feedback.length > LIMITS.feedback){
-    errEl.textContent = `That’s ${feedback.length} characters — ${LIMITS.feedback} is the limit.`;
-    errEl.hidden = false;
-    textEl.setAttribute("aria-invalid","true");
-    textEl.focus();
-    return;
-  }
-  errEl.hidden = true;
-  textEl.removeAttribute("aria-invalid");
-
-  if(!CONFIG.feedbackEndpoint){
-    fbRender(fbFallbackHTML(name, feedback, context, false));
-    return;
-  }
-
-  sendEl.disabled = true;
-  sendEl.textContent = "Sending…";
-  try{
-    /* URLSearchParams → x-www-form-urlencoded → no preflight. */
-    const payload = new URLSearchParams();
-    payload.set("name", name);
-    payload.set("feedback", feedback);
-    payload.set("context", context);
-    payload.set("website", "");
-    await fetch(CONFIG.feedbackEndpoint, {method:"POST", body:payload});
-    fbRender(fbThanksHTML());
-  }catch(err){
-    fbRender(fbFallbackHTML(name, feedback, context, true));
-  }
-}
-
-fab.addEventListener("click", e=>{e.stopPropagation(); openFeedback();});
-fbScrim.addEventListener("click", e=>{ if(e.target === fbScrim) closeFeedback(); });
-fbDialog.addEventListener("click", e=>e.stopPropagation());
-/* Esc closes; Tab stays inside while the dialog is up. */
-document.addEventListener("keydown", e=>{
-  if(fbScrim.hidden) return;
-  if(e.key === "Escape"){ e.stopPropagation(); closeFeedback(); return; }
-  if(e.key !== "Tab") return;
-  const focusable = [...fbDialog.querySelectorAll('button,input,textarea,a[href]')]
-    .filter(el=>el.offsetParent !== null || el === document.activeElement);
-  if(!focusable.length) return;
-  const first = focusable[0], last = focusable[focusable.length-1];
-  if(e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
-  else if(!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
-}, true);
+document.getElementById("fab").href = CONFIG.feedbackFormUrl;
 
 /* ---- data integrity check (console only) ---- */
 DECISIONS.forEach(d=>d.roles.forEach(([rid])=>{
