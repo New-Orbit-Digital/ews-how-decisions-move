@@ -32,4 +32,7 @@ History: until 2026-09-25 this repo lived at `NewOrbitDigital/ews-how-decisions-
 | 2026-09-25 | Local build served at `/ews-how-decisions-move/` subpath (Chromium, 1280×800) | 200; title renders; 0 console errors, 0 failed requests (Google Fonts stubbed — sandbox can't reach them) |
 | 2026-09-25 | Core flow: click "My child is being bullied or harassed" | Pathway view opens at `?s=bullying`, step 1 "Your child's class teacher" shown; 0 errors |
 | 2026-09-25 | Source scan for names/emails/secrets | None found — roles only; only external URL is the public Google Form |
-| _pending_ | https://justbost.com/ews-how-decisions-move/ live load | — |
+| 2026-09-25 | Live https://justbost.com/ews-how-decisions-move/ (Chrome, after Actions run #8) | Loads; title correct; `meta robots=noindex,nofollow` present; Fraunces + Public Sans loaded; only page resources are Google Fonts, all loaded; no page console errors (the one 404 is the browser's automatic `/favicon.ico` at the justbost.com root) |
+| 2026-09-25 | Live core flow: click "My child is being bullied or harassed" | Opens `?s=bullying` with step 1 "Your child's class teacher"; `?view=explore` also loads |
+| 2026-09-25 | Live `./screenshot.png` | 200, `image/png`, 86,683 bytes |
+| 2026-09-25 | Old URL https://neworbitdigital.github.io/ews-how-decisions-move/ | 404 "Site not found" — expected after the transfer; no redirect exists |
