@@ -43,6 +43,20 @@ jobs:
           # Working draft, not yet approved: ask crawlers to stay out.
           # Delete this step when the committee is ready to be found.
           printf 'User-agent: *\nDisallow: /\n' > _site/robots.txt
+          # Off-grid page in a public repo: also tell crawlers not to index or
+          # follow, in the page itself (skipped if the source already has it).
+          grep -q 'name="robots"' _site/index.html || \
+            sed -i '0,/<meta name="viewport"[^>]*>/s//&\n<meta name="robots" content="noindex,nofollow">/' _site/index.html
+          grep -q 'content="noindex,nofollow"' _site/index.html
+
+      # Portfolio thumbnail for justbost.com, regenerated on every deploy so
+      # it always matches what's live. Served at ./screenshot.png.
+      - name: Capture screenshot.png (1280x800)
+        run: |
+          npx -y playwright@1.56.0 install --with-deps chromium
+          npx -y playwright@1.56.0 screenshot --viewport-size="1280, 800" \
+            --wait-for-timeout=2000 "file://$PWD/_site/index.html" _site/screenshot.png
+          test -s _site/screenshot.png
 
       - uses: actions/upload-pages-artifact@v3
         with:
